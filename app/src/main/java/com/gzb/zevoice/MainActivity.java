@@ -66,10 +66,14 @@ public class MainActivity extends AppCompatActivity {
     private Button pitch05;
     private Button pitch15;
     private Button pitch20;
+    private Button speed10;
+    private Button speed05;
+    private Button speed15;
+    private Button speed20;
     private Button startButton;
     private Button stopButton;
     private Button playButton;
-    private static final int BUFFER_SIZE_FACTOR = 2;
+    private static final int BUFFER_SIZE_FACTOR = 12;
 
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
     private AudioRecord recorder = null;
@@ -98,14 +102,19 @@ public class MainActivity extends AppCompatActivity {
         pitch05 = (Button) findViewById(R.id.pitch05);
         pitch15 = (Button) findViewById(R.id.pitch15);
         pitch20 = (Button) findViewById(R.id.pitch20);
+        speed10 = (Button) findViewById(R.id.speed10);
+        speed05 = (Button) findViewById(R.id.speed05);
+        speed15 = (Button) findViewById(R.id.speed15);
+        speed20 = (Button) findViewById(R.id.speed20);
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
         playButton = (Button) findViewById(R.id.btnPlay);
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT);
+                AudioFormat.ENCODING_PCM_16BIT)*BUFFER_SIZE_FACTOR;
         pitch=1.5f;
+        speed=1.5f;
         //bufferSize=32767*1024;
         Log.d("MAIN", "Buffersize=" + String.valueOf(bufferSize));
         //-------------------------------------------------------------------------------------------------------------
@@ -195,6 +204,30 @@ public class MainActivity extends AppCompatActivity {
                 pitch=2.0f;
             }
         });
+        speed05.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speed=0.5f;
+            }
+        });
+        speed10.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speed=1.0f;
+            }
+        });
+        speed15.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speed=1.5f;
+            }
+        });
+        speed20.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speed=2.0f;
+            }
+        });
         mOn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -270,8 +303,8 @@ public class MainActivity extends AppCompatActivity {
         audioRecord.startRecording();
         PlaybackParams pbp = audioTrack.getPlaybackParams();
         pbp.allowDefaults();
-        //pbp.setPitch(1.0f);
-        //pbp.setSpeed(1.0f);
+        pbp.setPitch(pitch);
+        pbp.setSpeed(speed);
 
         audioTrack.setPlaybackParams(pbp);
         audioTrack.play();
@@ -282,9 +315,9 @@ public class MainActivity extends AppCompatActivity {
             Log.d("MAIN", "recording thread start");
             while (isRecording) {
                 int read = audioRecord.read(audioBuffer, 0, audioBuffer.length);
-                Log.d("MAIN", "got data len=" + String.valueOf(read));
+                //Log.d("MAIN", "got data len=" + String.valueOf(read));
                 if (read > 0) {
-                    Log.d("MAIN", "writing");
+                    //Log.d("MAIN", "writing");
                     //Log.v("AUDIORECORD","writing");
                     audioTrack.write(audioBuffer, 0, read, AudioTrack.WRITE_BLOCKING);
                 }
@@ -341,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
         PlaybackParams pbp = audioTrack.getPlaybackParams();
         pbp.allowDefaults();
         pbp.setPitch(pitch);
-        //pbp.setSpeed(1.5f);
+        pbp.setSpeed(speed);
         audioTrack.setPlaybackParams(pbp);
         audioTrack.play();
         try {

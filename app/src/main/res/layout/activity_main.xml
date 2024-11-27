@@ -73,6 +73,55 @@ tools:context="com.gzb.zevoice.MainActivity">
 
 </TableLayout>
 
+    <TableLayout
+        android:stretchColumns="*"
+        >
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+
+        <ToggleButton
+            android:id="@+id/speed20"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="s2.0"
+            android:textOff="s2.0"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+        <ToggleButton
+            android:id="@+id/speed10"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="s1.0"
+            android:textOff="s1.0"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+        <ToggleButton
+            android:id="@+id/speed05"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="s0.5"
+            android:textOff="s0.5"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+        <ToggleButton
+            android:id="@+id/speed15"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="s1.5"
+            android:textOff="s1.5"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+    </TableRow>
+
+</TableLayout>
 
 
 
