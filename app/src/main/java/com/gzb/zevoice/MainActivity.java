@@ -29,6 +29,7 @@ import android.content.pm.PackageManager;
 //import android.support.v7.app.*;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.view.View;
 
 import android.content.Intent;
@@ -73,9 +74,10 @@ public class MainActivity extends AppCompatActivity {
     private Button startButton;
     private Button stopButton;
     private Button playButton;
-    private static final int BUFFER_SIZE_FACTOR = 12;
+    private static final int BUFFER_SIZE_FACTOR = 6;
 
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
+    private final AtomicBoolean letAppRun = new AtomicBoolean(false);
     private AudioRecord recorder = null;
     private Thread recordingThread = null;
     private Uri baseDocumentTreeUri;
@@ -244,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d("RECORD", "start Button");
-                startRecordingOnly();
+                startRecordingWithFile();
                 startButton.setEnabled(false);
                 stopButton.setEnabled(true);
             }
@@ -253,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d("RECORD", "stop Button");
-                stopRecordingOnly();
+                stopRecordingWithFile();
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
             }
@@ -338,8 +340,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-    private void startRecordingOnly() {
-        Log.d("MAIN", "startRecordingOnly()");
+    private void startRecordingWithFile() {
+        Log.d("MAIN", "startRecordingWithFile()");
         String[] permissionRecordAudio = {Manifest.permission.RECORD_AUDIO};
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             Log.d("MAIN", "Request perm Record audio");
@@ -349,18 +351,20 @@ public class MainActivity extends AppCompatActivity {
         //recorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLE_RATE,
         //        CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
         audioRecord.startRecording();
-        recordingInProgress.set(true);
+        //recordingInProgress.set(true);
+        letAppRun.set(true);
         recordingThread = new Thread(new RecordingRunnable(), "Recording Thread");
         recordingThread.start();
     }
 
     //-------------------------------------------------------------------------------------
-    private void stopRecordingOnly() {
-        Log.d("MAIN", "stopRecordingOnly()");
+    private void stopRecordingWithFile() {
+        Log.d("MAIN", "stopRecordingWithFile()");
         if (null == audioRecord) {
             return;
         }
         recordingInProgress.set(false);
+        letAppRun.set(false);
         audioRecord.stop();
         //audioRecord.release();
         //audioRecord = null;
@@ -368,7 +372,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-    private void playRecording(String fName) {
+    private void playRecordingWithFile(String fName) {
         Log.d("MAIN", "playRecordingOnly()");
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
@@ -400,27 +404,34 @@ public class MainActivity extends AppCompatActivity {
         // Records to a file then plays it
         @Override
         public void run() {
-            Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
-            final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
-            fName=Environment.getExternalStorageDirectory()+"/Documents/ZeVoice.pcm";
-            Log.d("MAIN", "Recording File : " + fName);
-            final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
-            try (final FileOutputStream outStream = new FileOutputStream(file)) {
-                while (recordingInProgress.get()) {
-                    int result = audioRecord.read(buffer, bufferSize);
-                    if (result < 0) {
-                        throw new RuntimeException("Reading of audio buffer failed: " +
-                                getBufferReadFailureReason(result));
+            while (letAppRun.get() ) {
+                recordingInProgress.set(true);
+                new Thread(() -> {
+                    SystemClock.sleep(1500);
+                    recordingInProgress.set(false);
+                }).start();
+
+                Log.d("MAIN", " ExtStorage  " + Environment.getExternalStorageDirectory());
+                final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
+                fName = Environment.getExternalStorageDirectory() + "/Documents/ZeVoice.pcm";
+                Log.d("MAIN", "Recording File : " + fName);
+                final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
+                try (final FileOutputStream outStream = new FileOutputStream(file)) {
+                    while (recordingInProgress.get()) {
+                        int result = audioRecord.read(buffer, bufferSize);
+                        if (result < 0) {
+                            throw new RuntimeException("Reading of audio buffer failed: " +
+                                    getBufferReadFailureReason(result));
+                        }
+                        outStream.write(buffer.array(), 0, bufferSize);
+                        buffer.clear();
                     }
-                    //Log.d("MAIN", "Writing Buffer");
-                    outStream.write(buffer.array(), 0, bufferSize);
-                    buffer.clear();
+                } catch (IOException e) {
+                    Log.d("MAIN", "Exception");
+                    throw new RuntimeException("Writing of recorded audio failed", e);
                 }
-            } catch (IOException e) {
-                Log.d("MAIN", "Exception");
-                throw new RuntimeException("Writing of recorded audio failed", e);
+                playRecordingWithFile(fName);
             }
-            playRecording(fName);
         }
 
         //-------------------------------------------------------------------------------------
