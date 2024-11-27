@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:orientation="vertical"
+tools:context="com.gzb.zevoice.MainActivity">
+<TableLayout
+    android:stretchColumns="*">
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="ZeVoice"
+            android:textStyle="bold" />
+    </TableRow>
+</TableLayout>
+
+<TableLayout
+    android:stretchColumns="*"
+    >
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+
+        <ToggleButton
+            android:id="@+id/sample"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="sample"
+            android:textOff="sample"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+        <ToggleButton
+            android:id="@+id/x10"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="x1.0"
+            android:textOff="x1.0"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+        <ToggleButton
+            android:id="@+id/x05"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="x0.5"
+            android:textOff="x0.5"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+        <ToggleButton
+            android:id="@+id/x15"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn="x1.5"
+            android:textOff="x1.5"
+            android:padding="1dp"
+            android:layout_margin="2dp"/>
+
+
+    </TableRow>
+
+</TableLayout>
+
+
+
+
+<TableLayout
+    android:stretchColumns="*"
+    >
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+        <Button
+            android:id="@+id/off"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:text="OFF" />
+
+        <Button
+            android:id="@+id/on"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:text="ON" />
+
+    </TableRow>
+</TableLayout>
+
+
+    <TableLayout
+        android:stretchColumns="*"
+        >
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+            <Button
+                android:id="@+id/btnStart"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:text="Start" />
+
+            <Button
+                android:id="@+id/btnStop"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:text="Stop" />
+
+        </TableRow>
+    </TableLayout>
+
+</TableLayout>
