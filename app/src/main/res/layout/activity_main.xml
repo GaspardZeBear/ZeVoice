@@ -31,40 +31,40 @@ tools:context="com.gzb.zevoice.MainActivity">
         android:layout_height="match_parent" >
 
         <ToggleButton
-            android:id="@+id/sample"
+            android:id="@+id/pitch20"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="sample"
-            android:textOff="sample"
+            android:textOn="p2.0"
+            android:textOff="p2.0"
             android:padding="1dp"
             android:layout_margin="2dp"/>
 
 
         <ToggleButton
-            android:id="@+id/x10"
+            android:id="@+id/pitch10"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="x1.0"
-            android:textOff="x1.0"
+            android:textOn="p1.0"
+            android:textOff="p1.0"
             android:padding="1dp"
             android:layout_margin="2dp"/>
 
         <ToggleButton
-            android:id="@+id/x05"
+            android:id="@+id/pitch05"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="x0.5"
-            android:textOff="x0.5"
+            android:textOn="p0.5"
+            android:textOff="p0.5"
             android:padding="1dp"
             android:layout_margin="2dp"/>
 
 
         <ToggleButton
-            android:id="@+id/x15"
+            android:id="@+id/pitch15"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="x1.5"
-            android:textOff="x1.5"
+            android:textOn="p1.5"
+            android:textOff="p1.5"
             android:padding="1dp"
             android:layout_margin="2dp"/>
 

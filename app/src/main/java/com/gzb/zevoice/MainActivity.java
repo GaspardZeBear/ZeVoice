@@ -62,9 +62,10 @@ public class MainActivity extends AppCompatActivity {
     private Button mSample;
     private Button mOn;
     private Button mOff;
-    private Button x10;
-    private Button x05;
-    private Button x15;
+    private Button pitch10;
+    private Button pitch05;
+    private Button pitch15;
+    private Button pitch20;
     private Button startButton;
     private Button stopButton;
     private Button playButton;
@@ -77,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private ActivityResultLauncher<Intent> launcher;
     String fName;
+    float pitch;
+    float speed;
 
 
     // Requesting permission to RECORD_AUDIO
@@ -89,12 +92,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSample = (Button) findViewById(R.id.sample);
         mOn = (Button) findViewById(R.id.on);
         mOff = (Button) findViewById(R.id.off);
-        x10 = (Button) findViewById(R.id.x10);
-        x05 = (Button) findViewById(R.id.x05);
-        x15 = (Button) findViewById(R.id.x15);
+        pitch10 = (Button) findViewById(R.id.pitch10);
+        pitch05 = (Button) findViewById(R.id.pitch05);
+        pitch15 = (Button) findViewById(R.id.pitch15);
+        pitch20 = (Button) findViewById(R.id.pitch20);
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
         playButton = (Button) findViewById(R.id.btnPlay);
@@ -102,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT);
+        pitch=1.5f;
         //bufferSize=32767*1024;
         Log.d("MAIN", "Buffersize=" + String.valueOf(bufferSize));
         //-------------------------------------------------------------------------------------------------------------
@@ -167,6 +171,30 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MAIN", "audiotrack Built");
 
         Log.d("MAIN", "listener Build");
+        pitch05.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pitch=0.5f;
+            }
+        });
+        pitch10.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pitch=1.0f;
+            }
+        });
+        pitch15.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pitch=1.5f;
+            }
+        });
+        pitch20.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pitch=2.0f;
+            }
+        });
         mOn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -301,9 +329,9 @@ public class MainActivity extends AppCompatActivity {
         }
         recordingInProgress.set(false);
         audioRecord.stop();
-        audioRecord.release();
-        audioRecord = null;
-        recordingThread = null;
+        //audioRecord.release();
+        //audioRecord = null;
+        //recordingThread = null;
     }
 
     //-------------------------------------------------------------------------------------
@@ -312,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
         pbp.allowDefaults();
-        pbp.setPitch(2.0f);
+        pbp.setPitch(pitch);
         //pbp.setSpeed(1.5f);
         audioTrack.setPlaybackParams(pbp);
         audioTrack.play();
@@ -336,6 +364,7 @@ public class MainActivity extends AppCompatActivity {
     private class RecordingRunnable implements Runnable {
 
         //-------------------------------------------------------------------------------------
+        // Records to a file then plays it
         @Override
         public void run() {
             Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
@@ -359,31 +388,6 @@ public class MainActivity extends AppCompatActivity {
                 throw new RuntimeException("Writing of recorded audio failed", e);
             }
             playRecording(fName);
-        }
-
-        //@override
-        //-------------------------------------------------------------------------------------
-        public void runOK() {
-            Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
-            final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
-            String fName=Environment.getExternalStorageDirectory()+"/Documents/ZeVoice.pcm";
-            Log.d("MAIN", "Recording File : " + fName);
-            final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
-            try (final FileOutputStream outStream = new FileOutputStream(file)) {
-                while (recordingInProgress.get()) {
-                    int result = audioRecord.read(buffer, bufferSize);
-                    if (result < 0) {
-                        throw new RuntimeException("Reading of audio buffer failed: " +
-                                getBufferReadFailureReason(result));
-                    }
-                    Log.d("MAIN", "Writing Buffer");
-                    outStream.write(buffer.array(), 0, bufferSize);
-                    buffer.clear();
-                }
-            } catch (IOException e) {
-                Log.d("MAIN", "Exception");
-                throw new RuntimeException("Writing of recorded audio failed", e);
-            }
         }
 
         //-------------------------------------------------------------------------------------
