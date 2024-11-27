@@ -5,20 +5,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import android.content.SharedPreferences;
 import android.media.PlaybackParams;
+import android.net.Uri;
 import android.os.Bundle;
 import android.media.AudioRecord;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
-import android.media.AudioRecord.Builder;
-import android.media.AudioRecord.*;
 import android.media.AudioFormat;
 import android.media.AudioAttributes;
-import android.media.AudioManager;
 //import android.media.AudioManager;
-import android.media.MediaRecorder;
 import android.media.MediaRecorder.AudioSource;
 import android.media.AudioTrack;
 //import android.media.AudioTrack.Builder;
@@ -27,37 +24,25 @@ import android.media.AudioTrack;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.os.Bundle;
-import android.os.Environment;
-import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.os.Bundle;
-import android.support.v4.app.*;
 //import android.support.v7.app.*;
+import android.os.Environment;
 import android.view.View;
-import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
+import android.content.Intent;
+
+
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.ActivityResult;
+import android.app.Activity;
+
 
 import android.util.Log;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.ToggleButton;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -84,6 +69,9 @@ public class MainActivity extends AppCompatActivity {
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
     private AudioRecord recorder = null;
     private Thread recordingThread = null;
+    private Uri baseDocumentTreeUri;
+    private Context context;
+    private ActivityResultLauncher<Intent> launcher;
 
 
     // Requesting permission to RECORD_AUDIO
@@ -130,8 +118,8 @@ public class MainActivity extends AppCompatActivity {
         //if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
         //    Log.d("MAIN", "Request perm Write external storage");
         //    ActivityCompat.requestPermissions(this, permissionWriteExternalStorage, REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION);
-            //return;
-       // }
+        //return;
+        // }
 
         if (!permissionToRecordAccepted) {
             Log.d("MAIN", "Record not allowed");
@@ -139,17 +127,12 @@ public class MainActivity extends AppCompatActivity {
         }
         //if (!permissionToWriteAccepted) {
         //    Log.d("MAIN", "Write not allowed");
-            //finish();
+        //finish();
         //}
 
         //-------------------------------------------------------------------------------------------------------------
 
         Log.d("MAIN", "audiorecord Build");
-        //AudioRecord ar = new AudioRecord(MediaRecorder.AudioSource.MIC,
-        //        SAMPLE_RATE,
-        //        AudioFormat.CHANNEL_IN_MONO,
-        //        AudioFormat.ENCODING_PCM_16BIT,
-        //        bufferSize);
         audioRecord = new AudioRecord.Builder()
                 .setAudioSource(AudioSource.MIC)
                 .setAudioFormat(new AudioFormat.Builder()
@@ -160,12 +143,7 @@ public class MainActivity extends AppCompatActivity {
                 .setBufferSizeInBytes(bufferSize)
                 .build();
         Log.d("MAIN", "audiorecord Built");
-        //audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
-        //    SAMPLE_RATE,
-        //    AudioFormat.CHANNEL_OUT_MONO,
-        //    AudioFormat.ENCODING_PCM_16BIT,
-        //    bufferSize,
-        //    AudioTrack.MODE_STREAM);
+
         Log.d("MAIN", "audiotrack Build");
         audioTrack = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
@@ -214,8 +192,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         Log.d("LISTENER", "Built");
+
+        launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), (result) -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    baseDocumentTreeUri = Objects.requireNonNull(result.getData()).getData();
+                    final int takeFlags = (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    Log.d("MAIN","launcher " + baseDocumentTreeUri);
+                    // take persistable Uri Permission for future use
+                    //context.getContentResolver().takePersistableUriPermission(result.getData().getData(), takeFlags);
+                    getContentResolver().takePersistableUriPermission(baseDocumentTreeUri, takeFlags);
+
+                    //SharedPreferences preferences = context.getSharedPreferences("com.example.geofriend.fileutility", Context.MODE_PRIVATE);
+                    //preferences.edit().putString("filestorageuri", result.getData().getData().toString()).apply();
+                } else {
+                    Log.e("FileUtility", "Some Error Occurred : " + result);
+                }
+        });
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        launcher.launch(intent);
+
     }
 
+    //--------------------------------------------------------------------------------------------------------------
+    public void launchBaseDirectoryPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        launcher.launch(intent);
+        return;
+    }
 
     //-------------------------------------------------------------------------------------
     private void startRecordingAndPlaying() {
@@ -275,9 +278,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-
     private void stopRecordingOnly() {
-        Log.d("MAIN","stopRecordingOnly()");
+        Log.d("MAIN", "stopRecordingOnly()");
         if (null == audioRecord) {
             return;
         }
@@ -289,14 +291,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-
     private class RecordingRunnable implements Runnable {
 
         @Override
         public void run() {
-            //final File file = new File(Environment.getExternalStorageDirectory(), "recording.pcm");
-            final File file = new File(getFilesDir(), "recording.pcm");
-            Log.d("MAIN", "Recording File : " + getFilesDir() +"/recording.pcm");
+            Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
+            final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
+            //final File file=new File(baseDocumentTreeUri+"/recording.pcm");
+            String fName=Environment.getExternalStorageDirectory()+"/Documents/ZeVoice.pcm";
+            Log.d("MAIN", "Recording File : " + fName);
             final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
             try (final FileOutputStream outStream = new FileOutputStream(file)) {
                 while (recordingInProgress.get()) {
@@ -305,12 +308,12 @@ public class MainActivity extends AppCompatActivity {
                         throw new RuntimeException("Reading of audio buffer failed: " +
                                 getBufferReadFailureReason(result));
                     }
-                    Log.d("MAIN","Writing Buffer");
+                    Log.d("MAIN", "Writing Buffer");
                     outStream.write(buffer.array(), 0, bufferSize);
                     buffer.clear();
                 }
             } catch (IOException e) {
-                Log.d("MAIN","Exception");
+                Log.d("MAIN", "Exception");
                 throw new RuntimeException("Writing of recorded audio failed", e);
             }
         }
@@ -331,6 +334,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //-------------------------------------------------------------------------------------
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -345,4 +349,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void XonActivityResult(ActivityResult result) {
+        if (result.getResultCode() == Activity.RESULT_OK) {
+            baseDocumentTreeUri = Objects.requireNonNull(result.getData()).getData();
+            final int takeFlags = (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+            // take persistable Uri Permission for future use
+            context.getContentResolver().takePersistableUriPermission(result.getData().getData(), takeFlags);
+
+            SharedPreferences preferences = context.getSharedPreferences("com.example.geofriend.fileutility", Context.MODE_PRIVATE);
+            preferences.edit().putString("filestorageuri", result.getData().getData().toString()).apply();
+        } else {
+            Log.e("FileUtility", "Some Error Occurred : " + result);
+        }
+    }
 }
