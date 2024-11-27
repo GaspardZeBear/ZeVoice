@@ -116,6 +116,12 @@ tools:context="com.gzb.zevoice.MainActivity">
                 android:layout_height="wrap_content"
                 android:text="Stop" />
 
+            <Button
+                android:id="@+id/btnPlay"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:text="Play" />
+
         </TableRow>
     </TableLayout>
 

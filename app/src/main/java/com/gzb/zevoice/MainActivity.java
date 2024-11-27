@@ -1,7 +1,9 @@
 package com.gzb.zevoice;
 
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,6 +28,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 //import android.support.v7.app.*;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.view.View;
 
 import android.content.Intent;
@@ -39,7 +42,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.ActivityResult;
 import android.app.Activity;
-
+import androidx.documentfile.provider.DocumentFile;
 
 import android.util.Log;
 import android.widget.Button;
@@ -64,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private Button x15;
     private Button startButton;
     private Button stopButton;
+    private Button playButton;
     private static final int BUFFER_SIZE_FACTOR = 2;
 
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private Uri baseDocumentTreeUri;
     private Context context;
     private ActivityResultLauncher<Intent> launcher;
+    String fName;
 
 
     // Requesting permission to RECORD_AUDIO
@@ -92,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
         x15 = (Button) findViewById(R.id.x15);
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
+        playButton = (Button) findViewById(R.id.btnPlay);
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
@@ -191,6 +197,16 @@ public class MainActivity extends AppCompatActivity {
                 stopButton.setEnabled(false);
             }
         });
+
+        playButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d("MAIN", "play Button");
+                //playRecording();
+            }
+        });
+
+
         Log.d("LISTENER", "Built");
 
         launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), (result) -> {
@@ -291,13 +307,65 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
+    private void playRecording(String fName) {
+        Log.d("MAIN", "playRecordingOnly()");
+        byte[] audioBuffer = new byte[bufferSize];
+        PlaybackParams pbp = audioTrack.getPlaybackParams();
+        pbp.allowDefaults();
+        pbp.setPitch(2.0f);
+        //pbp.setSpeed(1.5f);
+        audioTrack.setPlaybackParams(pbp);
+        audioTrack.play();
+        try {
+            BufferedInputStream bis =
+                    new BufferedInputStream(new FileInputStream(new File(fName)));
+            int read;
+            while ( (read = bis.read(audioBuffer,0,bufferSize)) != -1) {
+                //Log.d("MAIN", "got data len=" + String.valueOf(read));
+                if (read > 0) {
+                    audioTrack.write(audioBuffer, 0, read, AudioTrack.WRITE_BLOCKING);
+                }
+            }
+        } catch (IOException e) {
+            Log.d("MAIN","IOException while playRecording");
+        }
+    }
+
+
+    //======================================================================================================================
     private class RecordingRunnable implements Runnable {
 
+        //-------------------------------------------------------------------------------------
         @Override
         public void run() {
             Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
             final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
-            //final File file=new File(baseDocumentTreeUri+"/recording.pcm");
+            fName=Environment.getExternalStorageDirectory()+"/Documents/ZeVoice.pcm";
+            Log.d("MAIN", "Recording File : " + fName);
+            final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
+            try (final FileOutputStream outStream = new FileOutputStream(file)) {
+                while (recordingInProgress.get()) {
+                    int result = audioRecord.read(buffer, bufferSize);
+                    if (result < 0) {
+                        throw new RuntimeException("Reading of audio buffer failed: " +
+                                getBufferReadFailureReason(result));
+                    }
+                    //Log.d("MAIN", "Writing Buffer");
+                    outStream.write(buffer.array(), 0, bufferSize);
+                    buffer.clear();
+                }
+            } catch (IOException e) {
+                Log.d("MAIN", "Exception");
+                throw new RuntimeException("Writing of recorded audio failed", e);
+            }
+            playRecording(fName);
+        }
+
+        //@override
+        //-------------------------------------------------------------------------------------
+        public void runOK() {
+            Log.d("MAIN"," ExtStorage  " + Environment.getExternalStorageDirectory());
+            final File file = new File(Environment.getExternalStorageDirectory(), "/Documents/ZeVoice.pcm");
             String fName=Environment.getExternalStorageDirectory()+"/Documents/ZeVoice.pcm";
             Log.d("MAIN", "Recording File : " + fName);
             final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
@@ -318,6 +386,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        //-------------------------------------------------------------------------------------
         private String getBufferReadFailureReason(int errorCode) {
             switch (errorCode) {
                 case AudioRecord.ERROR_INVALID_OPERATION:
@@ -349,18 +418,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void XonActivityResult(ActivityResult result) {
-        if (result.getResultCode() == Activity.RESULT_OK) {
-            baseDocumentTreeUri = Objects.requireNonNull(result.getData()).getData();
-            final int takeFlags = (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-            // take persistable Uri Permission for future use
-            context.getContentResolver().takePersistableUriPermission(result.getData().getData(), takeFlags);
-
-            SharedPreferences preferences = context.getSharedPreferences("com.example.geofriend.fileutility", Context.MODE_PRIVATE);
-            preferences.edit().putString("filestorageuri", result.getData().getData().toString()).apply();
-        } else {
-            Log.e("FileUtility", "Some Error Occurred : " + result);
-        }
-    }
 }
