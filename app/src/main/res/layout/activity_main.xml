@@ -5,8 +5,7 @@ android:layout_width="match_parent"
 android:layout_height="match_parent"
 android:orientation="vertical"
 tools:context="com.gzb.zevoice.MainActivity">
-<TableLayout
-    android:stretchColumns="*">
+<TableLayout android:stretchColumns="*">
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -22,14 +21,10 @@ tools:context="com.gzb.zevoice.MainActivity">
     </TableRow>
 </TableLayout>
 
-<TableLayout
-    android:stretchColumns="*"
-    >
-
+<TableLayout android:stretchColumns="*" >
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="match_parent" >
-
         <ToggleButton
             android:id="@+id/pminus"
             android:layout_width="wrap_content"
@@ -46,7 +41,6 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:ellipsize="end"
             android:maxLines="1"
             android:text="pitch" />
-
         <ToggleButton
             android:id="@+id/pplus"
             android:layout_width="wrap_content"
@@ -55,18 +49,13 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:textOff="p+"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
     </TableRow>
-
 </TableLayout>
 
-    <TableLayout
-        android:stretchColumns="*"
-        >
+<TableLayout android:stretchColumns="*">
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="match_parent" >
-
         <ToggleButton
             android:id="@+id/sminus"
             android:layout_width="wrap_content"
@@ -75,7 +64,6 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:textOff="s-"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
         <TextView
             android:id="@+id/tspeed"
             android:layout_width="wrap_content"
@@ -84,8 +72,6 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:ellipsize="end"
             android:maxLines="1"
             android:text="speed" />
-
-
         <ToggleButton
             android:id="@+id/splus"
             android:layout_width="wrap_content"
@@ -94,14 +80,10 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:textOff="s+"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
     </TableRow>
-
 </TableLayout>
 
-    <TableLayout
-        android:stretchColumns="*"
-        >
+    <TableLayout android:stretchColumns="*">
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="match_parent" >
@@ -116,17 +98,12 @@ tools:context="com.gzb.zevoice.MainActivity">
                 android:layout_width="50dp"
                 android:layout_height="wrap_content"
                 android:text="Stop" />
-
-
-
         </TableRow>
     </TableLayout>
-        <TableLayout
-            android:stretchColumns="*"
-            >
-            <TableRow>
 
-                <TextView
+    <TableLayout android:stretchColumns="*">
+      <TableRow>
+           <TextView
                     android:id="@+id/trecording"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -134,9 +111,69 @@ tools:context="com.gzb.zevoice.MainActivity">
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="Recording" />
+       </TableRow>
+    </TableLayout>
 
+    <TableLayout android:stretchColumns="*">
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+            <ToggleButton
+                android:id="@+id/durationMinus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="dur-"
+                android:textOff="dur-"
+                android:padding="1dp"
+                android:layout_margin="2dp"/>
+            <TextView
+                android:id="@+id/tduration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.9"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="duration" />
+            <ToggleButton
+                android:id="@+id/durationPlus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="dur+"
+                android:textOff="dur+"
+                android:padding="1dp"
+                android:layout_margin="2dp"/>
+        </TableRow>
+    </TableLayout>
 
-            </TableRow>
+    <TableLayout android:stretchColumns="*">
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+            <ToggleButton
+                android:id="@+id/silenceMinus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="sil-"
+                android:textOff="sil-"
+                android:padding="1dp"
+                android:layout_margin="2dp"/>
+            <TextView
+                android:id="@+id/tsilence"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.9"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="silence" />
+            <ToggleButton
+                android:id="@+id/silencePlus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="sil+"
+                android:textOff="sil+"
+                android:padding="1dp"
+                android:layout_margin="2dp"/>
+        </TableRow>
     </TableLayout>
 
 </TableLayout>
