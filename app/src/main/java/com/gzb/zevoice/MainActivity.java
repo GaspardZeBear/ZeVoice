@@ -62,7 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private AudioTrack audioTrack;
     private int bufferSize;
     private boolean isRecording = false;
-    private static final int RECORDINGDURATION=5000;
+    // abs sample value over SILENCE are not SILENCE !
+    private static final int SILENCE=10000;
+    private static final int RECORDINGDURATION=1500;
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
@@ -324,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
             int read=ab.capacity();
             Log.d("MAIN","got audioBuffer, capacity=" + read);
             audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
-            Log.d("MAIN","got audioBuffer written ");
+            //Log.d("MAIN","got audioBuffer written ");
             totalSize+=(int)read/2;
         }
         //Log.d("MAIN","playRecordedInMemory() going to Sleep headPosition= "+ audioTrack.getPlaybackHeadPosition() );
@@ -339,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
         }
         audioTrack.pause();
         audioTrack.flush();
-
+        SystemClock.sleep(50);
         audioTrack.stop();
         //audioTrack.release();
     }
@@ -396,17 +398,33 @@ public class MainActivity extends AppCompatActivity {
                 handler.obtainMessage(RECORDINGON).sendToTarget();
                 ArrayList<ByteBuffer> audioBuffers = new ArrayList<ByteBuffer>();
                 int loop=0;
+                int notDiscarded=0;
                 long start=System.currentTimeMillis();
                 while ((System.currentTimeMillis() - start) < RECORDINGDURATION ) {
-                    Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize);
+
                     ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                     int result = audioRecord.read(buffer, bufferSize);
-                    audioBuffers.add(buffer);
+                    int threshold = 10000;
+                    int gtSilence = 0;
+                    buffer.rewind();
+                    for (int i = 0; i < bufferSize; i += 2) {
+                        short s = buffer.getShort();
+                        if (Math.abs(s) > SILENCE) {
+                            gtSilence++;
+                        }
+                    }
+                    //Log.d("MAIN", "Abs(Sample Value) > " + threshold + " ="+ gtSilence);
+                    if (gtSilence > 0) {
+                        Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize);
+                        buffer.rewind();
+                        audioBuffers.add(buffer);
+                        notDiscarded++;
+                    } else {
+                        Log.d("MAIN", "discarding buffer " + bufferSize);
+                    }
                     loop++;
                 }
-                Log.d("MAIN", "reached max , loop="+loop
-                        + "getNotificationMarkerPosition()=" + audioRecord.getNotificationMarkerPosition()
-                        + "getPositionNotificationPeriod= " + audioRecord.getPositionNotificationPeriod()
+                Log.d("MAIN", "reached max , loop="+loop + " kept=" + notDiscarded
                         +  "getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
                 handler.obtainMessage(RECORDINGOFF).sendToTarget();;
                 playRecordedInMemory(audioBuffers);
