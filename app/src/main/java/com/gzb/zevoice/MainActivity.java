@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -361,7 +362,8 @@ public class MainActivity extends AppCompatActivity {
         audioRecord.startRecording();
         //recordingInProgress.set(true);
         letAppRun.set(true);
-        recordingThread = new Thread(new RecordingRunnable(), "Recording Thread");
+        //recordingThread = new Thread(new RecordingRunnable(), "Recording Thread");
+        recordingThread = new Thread(new RecordingInMemoryRunnable(), "Recording Thread");
         recordingThread.start();
     }
 
@@ -407,6 +409,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //-------------------------------------------------------------------------------------
+    private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
+        Log.d("MAIN", "playRecordingOnly() " + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
+        byte[] audioBuffer = new byte[bufferSize];
+        PlaybackParams pbp = audioTrack.getPlaybackParams();
+        pbp.allowDefaults();
+        pbp.setPitch(pitch);
+        pbp.setSpeed(speed);
+        audioTrack.setPlaybackParams(pbp);
+        audioTrack.play();
+
+        int totalSize=0;
+        for (ByteBuffer ab : audioBuffers) {
+            int read=ab.capacity();
+            Log.d("MAIN","got audioBuffer, capacity=" + read);
+            audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
+            Log.d("MAIN","got audioBuffer written ");
+            totalSize+=(int)read/2;
+        }
+        //Log.d("MAIN","playRecordedInMemory() going to Sleep headPosition= "+ audioTrack.getPlaybackHeadPosition() );
+        //SystemClock.sleep(1000);
+        //Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition());
+        //SystemClock.sleep(1000);
+        //Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition());
+        while( audioTrack.getPlaybackHeadPosition() < totalSize) {
+            Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
+            SystemClock.sleep(5);
+        }
+        audioTrack.flush();
+        audioTrack.pause();
+        //audioTrack.stop();
+    }
 
     //======================================================================================================================
     private class AudioFeeder implements Runnable {
@@ -447,9 +481,63 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //======================================================================================================================
+    private class RecordingInMemoryRunnable implements Runnable {
+
+        //-------------------------------------------------------------------------------------
+        // Records to a file then plays it
+        public int counter;
+
+        public RecordingInMemoryRunnable() {
+            //startWatchdog(2000);
+        }
+
+        //-------------------------------------------------------------------------------------
+        public void startWatchdog(int interval) {
+            new Thread(() -> {
+                while (letAppRun.get()) {
+                    recordingInProgress.set(false);
+                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress + " counter " + counter);
+                    synchronized ("WATCHDOG") {
+                        SystemClock.sleep(interval);
+                    }
+                    recordingInProgress.set(true);
+                    SystemClock.sleep(interval);
+                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress);
+                }
+            }).start();
+        }
+
+        @Override
+        public void run() {
+            counter = 0;
+
+            while (letAppRun.get()) {
+                ArrayList<ByteBuffer> audioBuffers = new ArrayList<ByteBuffer>();
+                int loop=0;
+                long start=System.currentTimeMillis();
+                while ((System.currentTimeMillis() - start) < 2000 ) {
+                    Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize);
+                    ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
+                    int result = audioRecord.read(buffer, bufferSize);
+                    audioBuffers.add(buffer);
+                    loop++;
+                    //buffer.clear();
+                }
+                Log.d("MAIN", "reached max , loop="+loop
+                        + "getNotificationMarkerPosition()=" + audioRecord.getNotificationMarkerPosition()
+                        + "getPositionNotificationPeriod= " + audioRecord.getPositionNotificationPeriod()
+                        +  "getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
+                // SystemClock.sleep(10);
+                //recordingInProgress.set(false);
+                playRecordedInMemory(audioBuffers);
+                //recordingInProgress.set(true);
+            }
+        }
+    }
 
 
-     //======================================================================================================================
+    //======================================================================================================================
     private class RecordingRunnable implements Runnable {
 
         //-------------------------------------------------------------------------------------
@@ -460,6 +548,7 @@ public class MainActivity extends AppCompatActivity {
             startWatchdog(2000);
         }
 
+        //-------------------------------------------------------------------------------------
         public void startWatchdog(int interval) {
             new Thread(() -> {
                 while (letAppRun.get() ) {
