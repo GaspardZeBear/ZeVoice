@@ -31,43 +31,30 @@ tools:context="com.gzb.zevoice.MainActivity">
         android:layout_height="match_parent" >
 
         <ToggleButton
-            android:id="@+id/pitch20"
+            android:id="@+id/pminus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="p2.0"
-            android:textOff="p2.0"
+            android:textOn="p-"
+            android:textOff="p-"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
+        <TextView
+            android:id="@+id/tpitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="pitch" />
 
         <ToggleButton
-            android:id="@+id/pitch10"
+            android:id="@+id/pplus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="p1.0"
-            android:textOff="p1.0"
+            android:textOn="p+"
+            android:textOff="p+"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
-        <ToggleButton
-            android:id="@+id/pitch05"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textOn="p0.5"
-            android:textOff="p0.5"
-            android:padding="1dp"
-            android:layout_margin="2dp"/>
-
-
-        <ToggleButton
-            android:id="@+id/pitch15"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textOn="p1.5"
-            android:textOff="p1.5"
-            android:padding="1dp"
-            android:layout_margin="2dp"/>
-
 
     </TableRow>
 
@@ -81,71 +68,36 @@ tools:context="com.gzb.zevoice.MainActivity">
         android:layout_height="match_parent" >
 
         <ToggleButton
-            android:id="@+id/speed20"
+            android:id="@+id/sminus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="s2.0"
-            android:textOff="s2.0"
+            android:textOn="s-"
+            android:textOff="s-"
             android:padding="1dp"
             android:layout_margin="2dp"/>
+
+        <TextView
+            android:id="@+id/tspeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="speed" />
 
 
         <ToggleButton
-            android:id="@+id/speed10"
+            android:id="@+id/splus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textOn="s1.0"
-            android:textOff="s1.0"
+            android:textOn="s+"
+            android:textOff="s+"
             android:padding="1dp"
             android:layout_margin="2dp"/>
-
-        <ToggleButton
-            android:id="@+id/speed05"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textOn="s0.5"
-            android:textOff="s0.5"
-            android:padding="1dp"
-            android:layout_margin="2dp"/>
-
-
-        <ToggleButton
-            android:id="@+id/speed15"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textOn="s1.5"
-            android:textOff="s1.5"
-            android:padding="1dp"
-            android:layout_margin="2dp"/>
-
 
     </TableRow>
 
 </TableLayout>
-
-
-
-<TableLayout
-    android:stretchColumns="*"
-    >
-    <TableRow
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" >
-        <Button
-            android:id="@+id/off"
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
-            android:text="OFF" />
-
-        <Button
-            android:id="@+id/on"
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
-            android:text="ON" />
-
-    </TableRow>
-</TableLayout>
-
 
     <TableLayout
         android:stretchColumns="*"
@@ -165,13 +117,26 @@ tools:context="com.gzb.zevoice.MainActivity">
                 android:layout_height="wrap_content"
                 android:text="Stop" />
 
-            <Button
-                android:id="@+id/btnPlay"
-                android:layout_width="50dp"
-                android:layout_height="wrap_content"
-                android:text="Play" />
+
 
         </TableRow>
+    </TableLayout>
+        <TableLayout
+            android:stretchColumns="*"
+            >
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/trecording"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.9"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="Recording" />
+
+
+            </TableRow>
     </TableLayout>
 
 </TableLayout>

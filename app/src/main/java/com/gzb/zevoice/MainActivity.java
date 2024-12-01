@@ -23,6 +23,7 @@ import android.media.AudioAttributes;
 import android.media.MediaRecorder.AudioSource;
 import android.media.AudioTrack;
 //import android.media.AudioTrack.Builder;
+import android.graphics.Color;
 
 
 import android.Manifest;
@@ -53,6 +54,7 @@ import androidx.documentfile.provider.DocumentFile;
 
 import android.util.Log;
 import android.widget.Button;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -60,6 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private AudioTrack audioTrack;
     private int bufferSize;
     private boolean isRecording = false;
+    private static final int RECORDINGDURATION=5000;
+    private static final int RECORDINGON = 1;
+    private static final int RECORDINGOFF = 2;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
@@ -67,21 +72,20 @@ public class MainActivity extends AppCompatActivity {
     private static final int SAMPLE_RATE = 44100;
     private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
-    private Button mSample;
-    private Button mOn;
-    private Button mOff;
-    private Button pitch10;
-    private Button pitch05;
-    private Button pitch15;
-    private Button pitch20;
-    private Button speed10;
-    private Button speed05;
-    private Button speed15;
-    private Button speed20;
+
+    private Button pminus;
+    private Button pplus;
+    private Button sminus;
+    private Button splus;
+    private TextView tpitch;
+    private TextView tspeed;
+    private TextView mRecording;
+
     private Button startButton;
     private Button stopButton;
     private Button playButton;
     private static final int BUFFER_SIZE_FACTOR = 6;
+    private Handler mHandler;
 
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
     private final AtomicBoolean letAppRun = new AtomicBoolean(false);
@@ -109,35 +113,36 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mOn = (Button) findViewById(R.id.on);
-        mOff = (Button) findViewById(R.id.off);
-        pitch10 = (Button) findViewById(R.id.pitch10);
-        pitch05 = (Button) findViewById(R.id.pitch05);
-        pitch15 = (Button) findViewById(R.id.pitch15);
-        pitch20 = (Button) findViewById(R.id.pitch20);
-        speed10 = (Button) findViewById(R.id.speed10);
-        speed05 = (Button) findViewById(R.id.speed05);
-        speed15 = (Button) findViewById(R.id.speed15);
-        speed20 = (Button) findViewById(R.id.speed20);
+
+        pminus = (Button) findViewById(R.id.pminus);
+        pplus = (Button) findViewById(R.id.pplus);
+        sminus = (Button) findViewById(R.id.sminus);
+        splus = (Button) findViewById(R.id.splus);
+        mRecording = (TextView) findViewById(R.id.trecording);
+        tspeed = (TextView) findViewById(R.id.tspeed);
+        tpitch = (TextView) findViewById(R.id.tpitch);
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
-        playButton = (Button) findViewById(R.id.btnPlay);
+
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT)*BUFFER_SIZE_FACTOR;
         pitch=1.5f;
         speed=1.5f;
+        tspeed.setText(String.format("%.1f",speed));
+        tpitch.setText(String.format("%.1f",pitch));
+
         //bufferSize=32767*1024;
         Log.d("MAIN", "Buffersize=" + String.valueOf(bufferSize));
         //-------------------------------------------------------------------------------------------------------------
 
         // Requesting permission to RECORD_AUDIO
         permissionToRecordAccepted = false;
-        permissionToWriteAccepted = false;
+        //permissionToWriteAccepted = false;
         context=context;
 
-        String[] permissionWriteExternalStorage = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        //String[] permissionWriteExternalStorage = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
 
         //---------------------------------------------------------------------------------------------------------------
@@ -193,77 +198,65 @@ public class MainActivity extends AppCompatActivity {
                 .setAudioAttributes( audioAttributes)
                 .build();
 
-        audioFeeder = new AudioFeeder(audioTrack);
-        Thread tAudioFeeder = new Thread(audioFeeder,"AudioFeeder");
-        tAudioFeeder.start();
+        //audioFeeder = new AudioFeeder(audioTrack);
+        //Thread tAudioFeeder = new Thread(audioFeeder,"AudioFeeder");
+        //tAudioFeeder.start();
 
+        mHandler = new Handler(Looper.getMainLooper()){
+            @Override
+            public void handleMessage(Message msg){
+                switch(msg.what) {
+                    case RECORDINGON :
+                        mRecording.setTextColor(Color.GREEN);
+                        mRecording.setBackgroundColor(Color.GREEN);
+                        mRecording.setText("Recording");
+                        break;
+                    case RECORDINGOFF :
+                        mRecording.setTextColor(Color.RED);
+                        mRecording.setBackgroundColor(Color.RED);
+                        mRecording.setText("Not Recording");
+                        break;
+                    default:
+                        Log.d("Main"," handler unknown message : " + (String)msg.obj );
+                }
+            }
+        };
 
         Log.d("MAIN", "listener Build");
-        pitch05.setOnClickListener(new View.OnClickListener() {
+        pplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch=0.5f;
+                pitch+=0.1f;
+                tpitch.setText(String.format("%.1f",pitch));
             }
         });
-        pitch10.setOnClickListener(new View.OnClickListener() {
+        pminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch=1.0f;
+                pitch-=0.1f;
+                tpitch.setText(String.format("%.1f",pitch));
             }
         });
-        pitch15.setOnClickListener(new View.OnClickListener() {
+        splus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch=1.5f;
+                speed+=0.1f;
+                tspeed.setText(String.format("%.1f",speed));
             }
         });
-        pitch20.setOnClickListener(new View.OnClickListener() {
+        sminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch=2.0f;
+                speed-=0.1f;
+                tspeed.setText(String.format("%.1f",speed));
             }
         });
-        speed05.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                speed=0.5f;
-            }
-        });
-        speed10.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                speed=1.0f;
-            }
-        });
-        speed15.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                speed=1.5f;
-            }
-        });
-        speed20.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                speed=2.0f;
-            }
-        });
-        mOn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startRecordingAndPlaying();
-            }
-        });
-        mOff.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopRecordingAndPlaying();
-            }
-        });
+
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.d("RECORD", "start Button");
-                startRecordingWithFile();
+                startRecording();
                 startButton.setEnabled(false);
                 stopButton.setEnabled(true);
             }
@@ -272,84 +265,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d("RECORD", "stop Button");
-                stopRecordingWithFile();
+                stopRecording();
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
             }
         });
 
-        playButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d("MAIN", "play Button");
-                //playRecording();
-            }
-        });
         Log.d("LISTENER", "Built");
-        launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), (result) -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
-                    baseDocumentTreeUri = Objects.requireNonNull(result.getData()).getData();
-                    final int takeFlags = (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    Log.d("MAIN","launcher " + baseDocumentTreeUri);
-                    // take persistable Uri Permission for future use
-                    //context.getContentResolver().takePersistableUriPermission(result.getData().getData(), takeFlags);
-                    getContentResolver().takePersistableUriPermission(baseDocumentTreeUri, takeFlags);
-                    //SharedPreferences preferences = context.getSharedPreferences("com.example.geofriend.fileutility", Context.MODE_PRIVATE);
-                    //preferences.edit().putString("filestorageuri", result.getData().getData().toString()).apply();
-                } else {
-                    Log.e("FileUtility", "Some Error Occurred : " + result);
-                }
-        });
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        launcher.launch(intent);
-    }
-
-    //--------------------------------------------------------------------------------------------------------------
-    public void launchBaseDirectoryPicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        launcher.launch(intent);
-        return;
-    }
+     }
 
     //-------------------------------------------------------------------------------------
-    private void startRecordingAndPlaying() {
-        Log.d("MAIN", "startRecordingAndPlaying()");
-        audioRecord.startRecording();
-        PlaybackParams pbp = audioTrack.getPlaybackParams();
-        pbp.allowDefaults();
-        pbp.setPitch(pitch);
-        pbp.setSpeed(speed);
-        audioTrack.setPlaybackParams(pbp);
-        audioTrack.play();
-        isRecording = true;
-
-        new Thread(() -> {
-            byte[] audioBuffer = new byte[bufferSize];
-            Log.d("MAIN", "recording thread start");
-            while (isRecording) {
-                int read = audioRecord.read(audioBuffer, 0, audioBuffer.length);
-                if (read > 0) {
-                    //audioTrack.write(audioBuffer, 0, read, AudioTrack.WRITE_BLOCKING);
-                    audioFeeder.getHandler().obtainMessage(MainActivity.PCMBUFFER, read, -1, audioBuffer).sendToTarget();
-                }
-            }
-            Log.d("MAIN", "recording thread end");
-        }).start();
-    }
-
-    //-------------------------------------------------------------------------------------
-    private void stopRecordingAndPlaying() {
-        if (isRecording) {
-            isRecording = false;
-            audioRecord.stop();
-            audioTrack.stop();
-            //audioRecord.release();
-            //audioTrack.release();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------
-    private void startRecordingWithFile() {
+    private void startRecording() {
         Log.d("MAIN", "startRecordingWithFile()");
         String[] permissionRecordAudio = {Manifest.permission.RECORD_AUDIO};
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -363,12 +289,12 @@ public class MainActivity extends AppCompatActivity {
         //recordingInProgress.set(true);
         letAppRun.set(true);
         //recordingThread = new Thread(new RecordingRunnable(), "Recording Thread");
-        recordingThread = new Thread(new RecordingInMemoryRunnable(), "Recording Thread");
+        recordingThread = new Thread(new RecordingInMemoryRunnable(mHandler), "Recording Thread");
         recordingThread.start();
     }
 
     //-------------------------------------------------------------------------------------
-    private void stopRecordingWithFile() {
+    private void stopRecording() {
         Log.d("MAIN", "stopRecordingWithFile()");
         if (null == audioRecord) {
             return;
@@ -382,38 +308,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-    private void playRecordingWithFile(File file) {
-        Log.d("MAIN", "playRecordingOnly() " + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
-        byte[] audioBuffer = new byte[bufferSize];
-        PlaybackParams pbp = audioTrack.getPlaybackParams();
-        pbp.allowDefaults();
-        pbp.setPitch(pitch);
-        pbp.setSpeed(speed);
-        audioTrack.setPlaybackParams(pbp);
-        audioTrack.play();
-
-        try {
-            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
-            int read;
-            while ( (read = bis.read(audioBuffer,0,bufferSize)) != -1) {
-                audioTrack.write(audioBuffer, 0, read, AudioTrack.WRITE_BLOCKING);
-                //audioFeeder.getHandler().obtainMessage(MainActivity.PCMBUFFER, read, -1, audioBuffer).sendToTarget();
-            }
-            bis.close();
-            //SystemClock.sleep(2000);
-            audioTrack.flush();
-            audioTrack.pause();
-            audioTrack.stop();
-        } catch (IOException e) {
-            Log.d("MAIN","IOException while playRecording");
-        }
-    }
-
-    //-------------------------------------------------------------------------------------
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
         Log.d("MAIN", "playRecordingOnly() " + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
+
         pbp.allowDefaults();
         pbp.setPitch(pitch);
         pbp.setSpeed(speed);
@@ -433,13 +332,16 @@ public class MainActivity extends AppCompatActivity {
         //Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition());
         //SystemClock.sleep(1000);
         //Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition());
+        //audioTrack.play();
         while( audioTrack.getPlaybackHeadPosition() < totalSize) {
             Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
-            SystemClock.sleep(5);
+            SystemClock.sleep(50);
         }
-        audioTrack.flush();
         audioTrack.pause();
-        //audioTrack.stop();
+        audioTrack.flush();
+
+        audioTrack.stop();
+        //audioTrack.release();
     }
 
     //======================================================================================================================
@@ -484,161 +386,31 @@ public class MainActivity extends AppCompatActivity {
     //======================================================================================================================
     private class RecordingInMemoryRunnable implements Runnable {
 
-        //-------------------------------------------------------------------------------------
-        // Records to a file then plays it
-        public int counter;
-
-        public RecordingInMemoryRunnable() {
-            //startWatchdog(2000);
+        private Handler handler;
+        public RecordingInMemoryRunnable(Handler handler) {
+            this.handler=handler;
         }
-
-        //-------------------------------------------------------------------------------------
-        public void startWatchdog(int interval) {
-            new Thread(() -> {
-                while (letAppRun.get()) {
-                    recordingInProgress.set(false);
-                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress + " counter " + counter);
-                    synchronized ("WATCHDOG") {
-                        SystemClock.sleep(interval);
-                    }
-                    recordingInProgress.set(true);
-                    SystemClock.sleep(interval);
-                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress);
-                }
-            }).start();
-        }
-
         @Override
         public void run() {
-            counter = 0;
-
             while (letAppRun.get()) {
+                handler.obtainMessage(RECORDINGON).sendToTarget();
                 ArrayList<ByteBuffer> audioBuffers = new ArrayList<ByteBuffer>();
                 int loop=0;
                 long start=System.currentTimeMillis();
-                while ((System.currentTimeMillis() - start) < 2000 ) {
+                while ((System.currentTimeMillis() - start) < RECORDINGDURATION ) {
                     Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize);
                     ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                     int result = audioRecord.read(buffer, bufferSize);
                     audioBuffers.add(buffer);
                     loop++;
-                    //buffer.clear();
                 }
                 Log.d("MAIN", "reached max , loop="+loop
                         + "getNotificationMarkerPosition()=" + audioRecord.getNotificationMarkerPosition()
                         + "getPositionNotificationPeriod= " + audioRecord.getPositionNotificationPeriod()
                         +  "getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
-                // SystemClock.sleep(10);
-                //recordingInProgress.set(false);
+                handler.obtainMessage(RECORDINGOFF).sendToTarget();;
                 playRecordedInMemory(audioBuffers);
-                //recordingInProgress.set(true);
-            }
-        }
-    }
-
-
-    //======================================================================================================================
-    private class RecordingRunnable implements Runnable {
-
-        //-------------------------------------------------------------------------------------
-        // Records to a file then plays it
-        public int counter;
-
-        public RecordingRunnable() {
-            startWatchdog(2000);
-        }
-
-        //-------------------------------------------------------------------------------------
-        public void startWatchdog(int interval) {
-            new Thread(() -> {
-                while (letAppRun.get() ) {
-                    recordingInProgress.set(false);
-                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress + " counter " + counter);
-                    synchronized ("WATCHDOG") {
-                        SystemClock.sleep(interval);
-                    }
-                    recordingInProgress.set(true);
-                    SystemClock.sleep(interval);
-                    Log.d("Watchdog", "recordingInProgress " + recordingInProgress);
-                }
-            }).start();
-        }
-
-        @Override
-        public void run() {
-            counter=0;
-            while (letAppRun.get() ) {
-                recordingInProgress.set(true);
-                counter++;
-                if (counter > 2 ) {
-                    counter=0;
-                }
-                synchronized ("WATCHDOG") {}
-
-                File root = android.os.Environment.getExternalStorageDirectory();
-                File dir = new File (root.getAbsolutePath() + "/Documents");
-                dir.mkdirs();
-                File file = new File(dir, "/ZeVoice/ZeVoice.pcm");
-
-                //String fSuffix="/Documents/ZeVoice.pcm";
-                //File dir=Environment.getExternalStorageDirectory();
-                //final File file = new File(dir, fSuffix);
-                //String fName="ZeVoice;";
-                //final DocumentFile dFile = DocumentFile.fromTreeUri(context,baseDocumentTreeUri).createFile("audio/pcm",fName);
-                //fName = dir + fSuffix;
-                Log.d("MAIN", "Recording File : " + file.getName() );
-                final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
-                try {
-                    //final FileOutputStream outStream = new FileOutputStream(dFile.getName());
-                    final FileOutputStream outStream = new FileOutputStream(file);
-                    while (recordingInProgress.get()) {
-                        int result = audioRecord.read(buffer, bufferSize);
-                        outStream.write(buffer.array(), 0, bufferSize);
-                        buffer.clear();
-                    }
-                    outStream.flush();
-                    outStream.close();
-                    Log.d("MAIN", "Stopped by watchdog, closing");
-                } catch (IOException e) {
-                    Log.d("MAIN", "Exception");
-                    throw new RuntimeException("Writing of recorded audio failed", e);
-                }
-                SystemClock.sleep(10);
-                //recordingInProgress.set(false);
-                playRecordingWithFile(file);
-                //recordingInProgress.set(true);
-            }
-        }
-
-        //-------------------------------------------------------------------------------------
-        private String getBufferReadFailureReason(int errorCode) {
-            switch (errorCode) {
-                case AudioRecord.ERROR_INVALID_OPERATION:
-                    return "ERROR_INVALID_OPERATION";
-                case AudioRecord.ERROR_BAD_VALUE:
-                    return "ERROR_BAD_VALUE";
-                case AudioRecord.ERROR_DEAD_OBJECT:
-                    return "ERROR_DEAD_OBJECT";
-                case AudioRecord.ERROR:
-                    return "ERROR";
-                default:
-                    return "Unknown (" + errorCode + ")";
-            }
-        }
-    }
-
-    //-------------------------------------------------------------------------------------
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        //Log.d("MAIN", "got RequestCode " + String.valueOf(requestCode) + " grant[0] "+ String.valueOf(grantResults[0]));
-        switch (requestCode) {
-            case REQUEST_RECORD_AUDIO_PERMISSION:
-                permissionToRecordAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                break;
-            case REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION:
-                permissionToWriteAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                break;
+              }
         }
     }
 
