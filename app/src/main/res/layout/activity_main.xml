@@ -119,13 +119,45 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:layout_width="match_parent"
             android:layout_height="match_parent" >
             <ToggleButton
+                android:id="@+id/durationMinusMinus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="--"
+                android:textOff="--"
+                android:maxWidth="10dp"
+                android:layout_margin="1dp"/>
+            <ToggleButton
                 android:id="@+id/durationMinus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textOn="dur-"
-                android:textOff="dur-"
-                android:padding="1dp"
-                android:layout_margin="2dp"/>
+                android:textOn="-"
+                android:textOff="-"
+                android:maxWidth="10dp"
+                android:layout_margin="1dp"/>
+
+            <ToggleButton
+                android:id="@+id/durationPlus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="+"
+                android:textOff="+"
+                android:maxWidth="10dp"
+                android:layout_margin="1dp"/>
+            <ToggleButton
+                android:id="@+id/durationPlusPlus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textOn="++"
+                android:textOff="++"
+                android:maxWidth="10dp"
+                android:layout_margin="1dp"/>
+        </TableRow>
+    </TableLayout>
+
+    <TableLayout android:stretchColumns="*">
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
             <TextView
                 android:id="@+id/tduration"
                 android:layout_width="wrap_content"
@@ -133,15 +165,8 @@ tools:context="com.gzb.zevoice.MainActivity">
                 android:layout_weight="0.9"
                 android:ellipsize="end"
                 android:maxLines="1"
+                android:minWidth="10dp"
                 android:text="duration" />
-            <ToggleButton
-                android:id="@+id/durationPlus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textOn="dur+"
-                android:textOff="dur+"
-                android:padding="1dp"
-                android:layout_margin="2dp"/>
         </TableRow>
     </TableLayout>
 

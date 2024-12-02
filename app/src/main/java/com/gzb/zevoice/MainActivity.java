@@ -84,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView tpitch;
     private Button durationminus;
     private Button durationplus;
+    private Button durationminusminus;
+    private Button durationplusplus;
     private Button silenceminus;
     private Button silenceplus;
     private TextView tduration;
@@ -131,6 +133,8 @@ public class MainActivity extends AppCompatActivity {
         sminus = (Button) findViewById(R.id.sminus);
         splus = (Button) findViewById(R.id.splus);
         durationminus = (Button) findViewById(R.id.durationMinus);
+        durationplusplus = (Button) findViewById(R.id.durationPlusPlus);
+        durationminusminus = (Button) findViewById(R.id.durationMinusMinus);
         durationplus = (Button) findViewById(R.id.durationPlus);
         silenceminus = (Button) findViewById(R.id.silenceMinus);
         silenceplus = (Button) findViewById(R.id.silencePlus);
@@ -284,10 +288,24 @@ public class MainActivity extends AppCompatActivity {
                 tduration.setText(String.format("%d",duration));
             }
         });
-        silenceminus.setOnClickListener(new View.OnClickListener() {
+        durationplusplus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                duration+=1000;
+                tduration.setText(String.format("%d",duration));
+            }
+        });
+        durationminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 duration-=100;
+                tduration.setText(String.format("%d",duration));
+            }
+        });
+        durationminusminus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                duration-=1000;
                 tduration.setText(String.format("%d",duration));
             }
         });
@@ -362,8 +380,9 @@ public class MainActivity extends AppCompatActivity {
         int totalSize=0;
         ByteBuffer lastBB=null;
         for (ByteBuffer ab : audioBuffers) {
+            //int read=ab.capacity();
             int read=ab.capacity();
-            Log.d("MAIN","got audioBuffer, capacity=" + read);
+            Log.d("MAIN","got audioBuffer, capacity=" + ab.capacity() + "position=" + ab.position());
             audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
             //Log.d("MAIN","got audioBuffer written ");
             totalSize+=(int)read/2;
@@ -376,7 +395,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        SystemClock.sleep(1000);
+        //SystemClock.sleep(5000);
         Log.d("MAIN","playRecordedInMemory() last waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
         //audioTrack.pause();
         //audioTrack.flush();
@@ -397,6 +416,7 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             while (letAppRun.get()) {
                 handler.obtainMessage(RECORDINGON).sendToTarget();
+                audioRecord.startRecording();
                 ArrayList<ByteBuffer> audioBuffers = new ArrayList<ByteBuffer>();
                 int loop=0;
                 int notDiscarded=0;
@@ -417,8 +437,9 @@ public class MainActivity extends AppCompatActivity {
                     int result = audioRecord.read(buffer, bufferSize);
 
                     if ( !isSilence(buffer) ) {
-                        Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize);
+                        Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize + " result=" + result);
                         buffer.rewind();
+                        //buffer.position(result);
                         audioBuffers.add(buffer);
                         notDiscarded++;
                         consecutiveSilenceCount=0;
@@ -428,15 +449,21 @@ public class MainActivity extends AppCompatActivity {
                     }
                     loop++;
                 }
-                for (int i0=0;i0<0;i0++) {
+                for (int i0=0;i0<1;i0++) {
                     Log.d("MAIN","inserting dummy " + i0);
                     ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
                     for (short i = 0; i < dummyBuffer.capacity()/2 ; i++) {
-                        dummyBuffer.putShort((short) 16000);
+                        dummyBuffer.putShort((short)(0));
                     }
                     dummyBuffer.rewind();
                     audioBuffers.add(dummyBuffer);
                 }
+                ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
+                int result = audioRecord.read(buffer, bufferSize);
+                //buffer.position(result);
+                Log.d("MAIN", "adding last buffer to audioBuffers size=" + bufferSize + " result=" + result);
+                audioBuffers.add(buffer);
+                audioRecord.stop();
 
                 Log.d("MAIN", "reached end of recording " + exitReason
                         + " loop="+loop
