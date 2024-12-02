@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.SharedPreferences;
 import android.media.PlaybackParams;
 import android.media.SoundPool;
+import android.media.audiofx.EnvironmentalReverb;
+import android.media.audiofx.PresetReverb;
 import android.net.Uri;
 import android.os.Bundle;
 import android.media.AudioRecord;
@@ -398,6 +400,15 @@ public class MainActivity extends AppCompatActivity {
         pbp.setPitch(pitch);
         pbp.setSpeed(speed);
         audioTrack.setPlaybackParams(pbp);
+        EnvironmentalReverb reverb=new EnvironmentalReverb(1,audioTrack.getAudioSessionId());
+        //PresetReverb reverb=new PresetReverb(1,0);
+        reverb.setRoomLevel((short)EnvironmentalReverb.PARAM_ROOM_LEVEL);
+        reverb.setEnabled(true);
+        //audioTrack.attachAuxEffect(reverb.getId());
+        audioTrack.setAuxEffectSendLevel(1.0f);
+        audioTrack.setVolume(0.8f);
+        audioTrack.attachAuxEffect(reverb.getId());
+
         audioTrack.play();
 
         int totalSize=0;
