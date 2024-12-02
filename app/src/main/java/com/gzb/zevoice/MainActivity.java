@@ -69,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECORDINGDURATION=1500;
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
+    private static final int RECORDINGWILLSTOP = 3;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
@@ -107,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private ActivityResultLauncher<Intent> launcher;
     String fName;
-    private volatile float pitch=1.0f;
+    private volatile float pitch=1.5f;
     private volatile float speed=1.0f;
     private int silence=SILENCE;
     private int duration=RECORDINGDURATION;
@@ -229,6 +230,11 @@ public class MainActivity extends AppCompatActivity {
                         mRecording.setBackgroundColor(Color.RED);
                         mRecording.setText("Not Recording");
                         break;
+                    case RECORDINGWILLSTOP :
+                        mRecording.setTextColor(Color.RED);
+                        mRecording.setBackgroundColor(Color.YELLOW);
+                        mRecording.setText("Will stop");
+                        break;
                     default:
                         Log.d("Main"," handler unknown message : " + (String)msg.obj );
                 }
@@ -279,7 +285,6 @@ public class MainActivity extends AppCompatActivity {
                 tsilence.setText(String.format("%d",silence));
             }
         });
-
 
         durationplus.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -341,19 +346,15 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, permissionRecordAudio, REQUEST_RECORD_AUDIO_PERMISSION);
             return;
         }
-        //recorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLE_RATE,
-        //        CHANNEL_CONFIG, AUDIO_FORMAT, bufferSize);
         audioRecord.startRecording();
-        //recordingInProgress.set(true);
         letAppRun.set(true);
-        //recordingThread = new Thread(new RecordingRunnable(), "Recording Thread");
         recordingThread = new Thread(new RecordingInMemoryRunnable(mHandler), "Recording Thread");
         recordingThread.start();
     }
 
     //-------------------------------------------------------------------------------------
     private void stopRecording() {
-        Log.d("MAIN", "stopRecordingWithFile()");
+        Log.d("MAIN", "stopRecording()");
         if (null == audioRecord) {
             return;
         }
@@ -382,17 +383,35 @@ public class MainActivity extends AppCompatActivity {
         for (ByteBuffer ab : audioBuffers) {
             //int read=ab.capacity();
             int read=ab.capacity();
-            Log.d("MAIN","got audioBuffer, capacity=" + ab.capacity() + "position=" + ab.position());
-            audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
-            //Log.d("MAIN","got audioBuffer written ");
+            Log.d("MAIN","got audioBuffer "
+                    + " capacity=" + ab.capacity()
+                    + " position=" + ab.position()
+                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
+            int capacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
+            Log.d("MAIN","after write capacity=" + capacity);
             totalSize+=(int)read/2;
             //lastBB=ab.duplicate();
         }
 
-        while( audioTrack.getPlaybackHeadPosition() < totalSize) {
-            Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
-            SystemClock.sleep(PLAYERSLEEP);
-        }
+        int numSamples=totalSize;
+        Log.d("MAIN","playRecordedInMemory() numSamples=" + numSamples);
+        audioTrack.setNotificationMarkerPosition(numSamples);  // Set the marker to the end.
+        //audioTrack.setNotificationMarkerPosition(1024);
+        audioTrack.setPlaybackPositionUpdateListener(
+                new AudioTrack.OnPlaybackPositionUpdateListener() {
+                    @Override
+                    public void onPeriodicNotification(AudioTrack track) {}
+                    @Override
+                    public void onMarkerReached(AudioTrack track) {
+                        Log.d("MAIN","playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
+                        //track.stop();
+                    }
+                });
+
+        //while( audioTrack.getPlaybackHeadPosition() < totalSize) {
+        //    Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
+        //    SystemClock.sleep(PLAYERSLEEP);
+        //}
 
 
         //SystemClock.sleep(5000);
@@ -431,11 +450,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if ( consecutiveSilenceCount > CONSECUTIVE_SILENCE_COUNT_MAX)  {
                         exitReason="Silence";
-                        break;
+                        //break;
                     }
                     ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                     int result = audioRecord.read(buffer, bufferSize);
 
+                    if ( (System.currentTimeMillis() - start) > duration - 1000 ) {
+                        handler.obtainMessage(RECORDINGWILLSTOP).sendToTarget();
+                    }
                     if ( !isSilence(buffer) ) {
                         Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize + " result=" + result);
                         buffer.rewind();
@@ -444,32 +466,36 @@ public class MainActivity extends AppCompatActivity {
                         notDiscarded++;
                         consecutiveSilenceCount=0;
                     } else {
-                        Log.d("MAIN", "discarding silence buffer " + bufferSize);
+                        //Log.d("MAIN", "discarding silence buffer " + bufferSize);
                         consecutiveSilenceCount++;
                     }
                     loop++;
                 }
-                for (int i0=0;i0<1;i0++) {
-                    Log.d("MAIN","inserting dummy " + i0);
-                    ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
-                    for (short i = 0; i < dummyBuffer.capacity()/2 ; i++) {
-                        dummyBuffer.putShort((short)(0));
-                    }
-                    dummyBuffer.rewind();
-                    audioBuffers.add(dummyBuffer);
-                }
+                handler.obtainMessage(RECORDINGOFF).sendToTarget();;
+                audioRecord.stop();
                 ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                 int result = audioRecord.read(buffer, bufferSize);
                 //buffer.position(result);
                 Log.d("MAIN", "adding last buffer to audioBuffers size=" + bufferSize + " result=" + result);
+                //buffer.position(bufferSize);
                 audioBuffers.add(buffer);
-                audioRecord.stop();
+                //audioRecord.stop();
+                for (int i0=0;i0<1;i0++) {
+                    Log.d("MAIN","inserting dummy " + i0);
+                    //ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
+                    ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
+                    for (short i = 0; i < dummyBuffer.capacity()/2 ; i++) {
+                        dummyBuffer.putShort((short)i);
+                    }
+                    dummyBuffer.rewind();
+                    audioBuffers.add(dummyBuffer);
+                }
 
                 Log.d("MAIN", "reached end of recording " + exitReason
                         + " loop="+loop
                         + " kept Buffers=" + notDiscarded
-                        +  " getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
-                handler.obtainMessage(RECORDINGOFF).sendToTarget();;
+                        + " getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
+
                 playRecordedInMemory(audioBuffers);
               }
         }
