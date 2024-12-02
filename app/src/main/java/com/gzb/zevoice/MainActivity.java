@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int SILENCE=10000;
     private static final int CONSECUTIVE_SILENCE_COUNT_MAX=2;
     private static final int PLAYERSLEEP=100;
-    private static final int RECORDINGDURATION=1500;
+    private static final int RECORDINGDURATION=2500;
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
     private static final int RECORDINGWILLSTOP = 3;
@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final AtomicBoolean recordingInProgress = new AtomicBoolean(false);
     private final AtomicBoolean letAppRun = new AtomicBoolean(false);
+    private final AtomicBoolean playNow = new AtomicBoolean(false);
     private AudioRecord recorder = null;
     private Thread recordingThread = null;
     private Uri baseDocumentTreeUri;
@@ -122,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
     private SoundPool soundPool;
 
     public AudioFeeder audioFeeder ;
+    public ByteBuffer mySound;
 
     //-------------------------------------------------------------------------------------
     @Override
@@ -146,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
         tsilence = (TextView) findViewById(R.id.tsilence);
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
+        playButton = (Button) findViewById(R.id.btnPlay);
 
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
@@ -169,6 +172,11 @@ public class MainActivity extends AppCompatActivity {
 
         //String[] permissionWriteExternalStorage = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
+        ByteBuffer mySound = ByteBuffer.allocateDirect(bufferSize);
+        for (short i = 0; i < mySound.capacity()/2 ; i++) {
+            short sin0=(short) ( (Math.sin((double)i) + Math.sin((double)(i+1000)) ));
+            mySound.putShort((short)i);
+        }
 
         //---------------------------------------------------------------------------------------------------------------
         //-------------------------------------------------------------------------------------------------------------
@@ -223,7 +231,9 @@ public class MainActivity extends AppCompatActivity {
                     case RECORDINGON :
                         mRecording.setTextColor(Color.GREEN);
                         mRecording.setBackgroundColor(Color.GREEN);
-                        mRecording.setText("Recording");
+                        //mRecording.setText("Recording");
+                        //long left=(long)(msg.obj)/1000;
+                        mRecording.setText(String.valueOf(msg.obj));
                         break;
                     case RECORDINGOFF :
                         mRecording.setTextColor(Color.RED);
@@ -259,14 +269,18 @@ public class MainActivity extends AppCompatActivity {
         splus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                speed+=0.1f;
+                if ( speed <= 2) {
+                    speed += 0.1f;
+                }
                 tspeed.setText(String.format("%.1f",speed));
             }
         });
         sminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                speed-=0.1f;
+                if ( speed > 0.5) {
+                    speed -= 0.1f;
+                }
                 tspeed.setText(String.format("%.1f",speed));
             }
         });
@@ -331,6 +345,14 @@ public class MainActivity extends AppCompatActivity {
                 stopRecording();
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
+            }
+        });
+        playButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                playButton.setEnabled(true);
+                playButton.setEnabled(false);
+                playNow.set(true);
             }
         });
 
@@ -434,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             while (letAppRun.get()) {
-                handler.obtainMessage(RECORDINGON).sendToTarget();
+                handler.obtainMessage(RECORDINGON,duration).sendToTarget();
                 audioRecord.startRecording();
                 ArrayList<ByteBuffer> audioBuffers = new ArrayList<ByteBuffer>();
                 int loop=0;
@@ -450,13 +472,20 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if ( consecutiveSilenceCount > CONSECUTIVE_SILENCE_COUNT_MAX)  {
                         exitReason="Silence";
-                        //break;
+                        break;
+                    }
+                    if ( playNow.get() )  {
+
+                        exitReason="Playnow";
+                        break;
                     }
                     ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                     int result = audioRecord.read(buffer, bufferSize);
 
                     if ( (System.currentTimeMillis() - start) > duration - 1000 ) {
                         handler.obtainMessage(RECORDINGWILLSTOP).sendToTarget();
+                    } else {
+                        handler.obtainMessage(RECORDINGON,duration - (System.currentTimeMillis() - start)).sendToTarget();
                     }
                     if ( !isSilence(buffer) ) {
                         Log.d("MAIN", "adding buffer to audioBuffers size=" + bufferSize + " result=" + result);
@@ -471,6 +500,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     loop++;
                 }
+                playNow.set(false);
                 handler.obtainMessage(RECORDINGOFF).sendToTarget();;
                 audioRecord.stop();
                 ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
@@ -482,12 +512,12 @@ public class MainActivity extends AppCompatActivity {
                 //audioRecord.stop();
                 for (int i0=0;i0<1;i0++) {
                     Log.d("MAIN","inserting dummy " + i0);
-                    //ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
                     ByteBuffer dummyBuffer = ByteBuffer.allocateDirect(bufferSize);
                     for (short i = 0; i < dummyBuffer.capacity()/2 ; i++) {
-                        dummyBuffer.putShort((short)i);
+                        dummyBuffer.putShort( (short)0);
                     }
                     dummyBuffer.rewind();
+                    //mySound.rewind();
                     audioBuffers.add(dummyBuffer);
                 }
 
