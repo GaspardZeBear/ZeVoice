@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
 
     private AudioRecord audioRecord;
     private AudioTrack audioTrack;
+    private AudioTrack audioTrack1;
     private int bufferSize;
     private boolean isRecording = false;
     // abs sample value over SILENCE are not SILENCE !
@@ -208,6 +209,20 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d("MAIN", "audiotrack Build");
         audioTrack = new AudioTrack.Builder()
+                .setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                .setAudioFormat(new AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build())
+                .setBufferSizeInBytes(3*bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build();
+
+        audioTrack1 = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -395,11 +410,16 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MAIN", "playRecordingOnly() " + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
-
         pbp.allowDefaults();
-        pbp.setPitch(pitch);
+        pbp.setPitch(0.8f*pitch);
         pbp.setSpeed(speed);
         audioTrack.setPlaybackParams(pbp);
+
+        PlaybackParams pbp1 = audioTrack.getPlaybackParams();
+        pbp1.allowDefaults();
+        pbp1.setPitch(2*pitch);
+        pbp1.setSpeed(speed);
+        audioTrack1.setPlaybackParams(pbp1);
         //EnvironmentalReverb reverb=new EnvironmentalReverb(1,audioTrack.getAudioSessionId());
         //PresetReverb reverb=new PresetReverb(1,0);
         //reverb.setRoomLevel((short)EnvironmentalReverb.PARAM_ROOM_LEVEL);
@@ -410,6 +430,8 @@ public class MainActivity extends AppCompatActivity {
         //audioTrack.attachAuxEffect(reverb.getId());
 
         audioTrack.play();
+        audioTrack1.play();
+
 
         int totalSize=0;
         int sizeFactor=1;
@@ -417,6 +439,8 @@ public class MainActivity extends AppCompatActivity {
         for (ByteBuffer ab : audioBuffers) {
             int read;
             int readCapacity;
+            int read1;
+            int readCapacity1;
 
             // Normal operation
             //read=ab.capacity();
@@ -429,14 +453,24 @@ public class MainActivity extends AppCompatActivity {
 
             // To test home made effect
             //sizeFactor=2;
+            ab.rewind();
             ByteBuffer abWithEffect;
-            abWithEffect=applyEffect(100,ab);
+            abWithEffect=applyEffect(0,ab);
+            read=abWithEffect.capacity();
+            readCapacity=audioTrack.write(abWithEffect, read, AudioTrack.WRITE_BLOCKING);
             Log.d("MAIN","abWithEffect just after init  "
                     + " abWithEffect.capacity=" + abWithEffect.capacity()
                     + " abWithEffect.position=" + abWithEffect.position()
+            );
+            ab.rewind();
+            ByteBuffer abWithEffect1;
+            abWithEffect1=applyEffect(0,ab);
+            Log.d("MAIN","abWithEffect1 just after init  "
+                    + " abWithEffect1.capacity=" + abWithEffect1.capacity()
+                    + " abWithEffect1.position=" + abWithEffect1.position()
                     );
-            read=abWithEffect.capacity();
-            readCapacity=audioTrack.write(abWithEffect, read, AudioTrack.WRITE_BLOCKING);
+            read1=abWithEffect1.capacity();
+            readCapacity1=audioTrack1.write(abWithEffect1, read, AudioTrack.WRITE_BLOCKING);
 
             Log.d("MAIN","got audioBuffer "
                     + " read=" + read
@@ -450,6 +484,13 @@ public class MainActivity extends AppCompatActivity {
                     + " readCapacity=" + readCapacity
                     + " abWithEffect.capacity=" + abWithEffect.capacity()
                     + " abWithEffect.position=" + abWithEffect.position()
+                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
+
+            Log.d("MAIN","audioBuffer with effect  "
+                    + " read=" + read
+                    + " readCapacity=" + readCapacity
+                    + " abWithEffect1.capacity=" + abWithEffect1.capacity()
+                    + " abWithEffect1.position=" + abWithEffect1.position()
                     + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
 
            totalSize+=(int)(sizeFactor*read/2);
@@ -466,11 +507,22 @@ public class MainActivity extends AppCompatActivity {
                     public void onPeriodicNotification(AudioTrack track) {}
                     @Override
                     public void onMarkerReached(AudioTrack track) {
-                        Log.d("MAIN","playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
+                        Log.d("MAIN","audiotrack playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
                         //track.stop();
                     }
                 });
-
+        audioTrack1.setNotificationMarkerPosition(numSamples);  // Set the marker to the end.
+        //audioTrack.setNotificationMarkerPosition(1024);
+        audioTrack1.setPlaybackPositionUpdateListener(
+                new AudioTrack.OnPlaybackPositionUpdateListener() {
+                    @Override
+                    public void onPeriodicNotification(AudioTrack track) {}
+                    @Override
+                    public void onMarkerReached(AudioTrack track) {
+                        Log.d("MAIN","audiotrack1 playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
+                        //track.stop();
+                    }
+                });
         Log.d("MAIN","playRecordedInMemory() last waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
         //audioTrack.pause();
         //audioTrack.flush();
