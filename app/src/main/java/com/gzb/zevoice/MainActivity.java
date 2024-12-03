@@ -74,8 +74,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
     private static final int RECORDINGWILLSTOP = 3;
-    private static final int PLAYON = 4;
-    private static final int PLAYOFF = 5;
+    private static final int BUTTONPLAYON = 4;
+    private static final int BUTTONPLAYOFF = 5;
+    private static final int BUTTONSTARTON = 6;
+    private static final int BUTTONSTARTOFF = 7;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
@@ -298,8 +300,17 @@ public class MainActivity extends AppCompatActivity {
                         mRecording.setBackgroundColor(Color.YELLOW);
                         mRecording.setText("Will stop");
                         break;
-                    case PLAYON:
+                    case BUTTONPLAYON:
                         playButton.setEnabled(true);
+                        break;
+                    case BUTTONPLAYOFF:
+                        playButton.setEnabled(false);
+                        break;
+                    case BUTTONSTARTON:
+                        startButton.setEnabled(true);
+                        break;
+                    case BUTTONSTARTOFF:
+                        startButton.setEnabled(false);
                         break;
                     default:
                         Log.d("Main"," handler unknown message : " + (String)msg.obj );
@@ -408,14 +419,14 @@ public class MainActivity extends AppCompatActivity {
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopRecording();
-                startButton.setEnabled(true);
                 stopButton.setEnabled(false);
                 playButton.setEnabled(false);
+                startButton.setEnabled(false);
+                stopRecording();
                 new Thread(() -> {
                     playRecordedInMemory(getFromFile());
-                    SystemClock.sleep(5000);
-                    mHandler.obtainMessage(PLAYON).sendToTarget();
+                    mHandler.obtainMessage(BUTTONPLAYON).sendToTarget();
+                    mHandler.obtainMessage(BUTTONSTARTON).sendToTarget();
                 }).start();
                 //playButton.setEnabled(true);
             }
@@ -698,6 +709,7 @@ public class MainActivity extends AppCompatActivity {
     //-------------------------------------------------------------------------------------
     public void statsOnByteBuffer(String tag,ByteBuffer bb) {
         int loud=0;
+        Log.d("MAIN"," statsOnByteBuffer " + tag + "bb capacity=" + bb.capacity() + " position=" + bb.position());
         for (int i=0;i<bb.capacity()/2;i++) {
             short val=bb.getShort(2*i);
             if (Math.abs((int)val) > SILENCE ) {
@@ -716,8 +728,10 @@ public class MainActivity extends AppCompatActivity {
             for (ByteBuffer ab : audioBuffers) {
                 ab.rewind();
                 statsOnByteBuffer("Recording", ab );
-
-                outStream.write(ab.array());
+                byte[] toBytes=new byte[ab.capacity()];
+                ab.get(toBytes);
+                //outStream.write(ab.array());
+                outStream.write(toBytes);
             }
         } catch (IOException e) {
             Log.d("MAIN","Exception");
@@ -734,21 +748,37 @@ public class MainActivity extends AppCompatActivity {
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
             byte[] buffer = new byte[bufferSize];
             int read;
+            int idx=0;
             while ( (read = bis.read(buffer,0,bufferSize)) != -1) {
                 if (read > 0) {
                   Log.d("MAIN", "Reading from File : got " + read + " bytes");
-                  ByteBuffer ar=ByteBuffer.wrap(buffer);
-                  arbb.add(ar);
+                  byte[] cloned=new byte[bufferSize];
+                  cloned=buffer.clone();
+                  ByteBuffer ar=ByteBuffer.wrap(cloned);
                   ar.rewind();
                   statsOnByteBuffer("ReadFromFile",ar);
+                  ar.rewind();
+                  boolean b=arbb.add(ar);
+                  //Log.d("MAIN", "Reading from File, adding to arbb.add="+b);
+                  if ( idx> 0) {
+                      //statsOnByteBuffer("i-1 : prev ",arbb.get(i-1));
+                  }
+                  idx++;
                 }
             }
-
         } catch (IOException e) {
             Log.d("MAIN","Exception");
             throw new RuntimeException("Writing of recorded audio failed", e);
         }
+
         Log.d("MAIN","Read audiobuffer : " + arbb.size());
+        for (int i=0;i<arbb.size();i++) {
+            ByteBuffer bb=arbb.get(i);
+            bb.rewind();
+            statsOnByteBuffer("ReadFromFileFinal i="+String.valueOf(i),bb);
+            Log.d("MAIN"," bb capacity=" + bb.capacity() + " position=" + bb.position());
+            bb.rewind();
+        }
         return(arbb);
     }
 
