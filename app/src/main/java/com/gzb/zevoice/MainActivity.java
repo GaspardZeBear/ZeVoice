@@ -519,20 +519,22 @@ public class MainActivity extends AppCompatActivity {
 
         for (ByteBuffer ab : audioBuffers) {
             int read=0;
+            int readWithEffect=0;
             int readCapacity;
             //for (AudioTrack at : audioTracks) {
+            ByteBuffer abWithEffect;
+            abWithEffect=applyEffect(50,ab);
+            readWithEffect=abWithEffect.capacity();
+            read = ab.capacity();
             for (int i=0 ; i < audioTracks.length ; i++ ) {
                 if (!pActiveCopy[i]) {
                     continue;
                 }
                 ab.rewind();
-                statsOnByteBuffer("Playing " + String.valueOf(i), ab);
-                ab.rewind();
-                read = ab.capacity();
-                //Log.d("MAIN","playRecordedInMemory() writing at="+i);
-                readCapacity = audioTracks[i].write(ab, read, AudioTrack.WRITE_BLOCKING);
-                //SystemClock.sleep(50);
-                //Log.d("MAIN","playRecordedInMemory() wrote at="+i);
+                abWithEffect.rewind();
+                //read = ab.capacity();
+                //audioTracks[i].write(ab, read, AudioTrack.WRITE_BLOCKING);
+                audioTracks[i].write(ab, readWithEffect, AudioTrack.WRITE_BLOCKING);
             };
         }
 
@@ -542,154 +544,52 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MAIN","playRecordedInMemory() over");
     }
 
-
-
-    //-------------------------------------------------------------------------------------
-    private void XplayRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
-        Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
-        byte[] audioBuffer = new byte[bufferSize];
-        PlaybackParams pbp = audioTrack.getPlaybackParams();
-        pbp.allowDefaults();
-        pbp.setPitch(0.8f*pitch);
-        pbp.setSpeed(speed);
-        audioTrack.setPlaybackParams(pbp);
-
-        PlaybackParams pbp1 = audioTrack.getPlaybackParams();
-        pbp1.allowDefaults();
-        pbp1.setPitch(2*pitch);
-        pbp1.setSpeed(speed);
-        audioTrack1.setPlaybackParams(pbp1);
-
-        audioTrack.play();
-        audioTrack1.play();
-
-
-        int totalSize=0;
-        int sizeFactor=1;
-        ByteBuffer lastBB=null;
-        for (ByteBuffer ab : audioBuffers) {
-            int read;
-            int readCapacity;
-            int read1;
-            int readCapacity1;
-            ab.rewind();
-            ByteBuffer abWithEffect;
-            abWithEffect=applyEffect(0,ab);
-            read=abWithEffect.capacity();
-            readCapacity=audioTrack.write(abWithEffect, read, AudioTrack.WRITE_BLOCKING);
-            Log.d("MAIN","abWithEffect just after init  "
-                    + " abWithEffect.capacity=" + abWithEffect.capacity()
-                    + " abWithEffect.position=" + abWithEffect.position()
-            );
-            ab.rewind();
-            ByteBuffer abWithEffect1;
-            abWithEffect1=applyEffect(0,ab);
-            Log.d("MAIN","abWithEffect1 just after init  "
-                    + " abWithEffect1.capacity=" + abWithEffect1.capacity()
-                    + " abWithEffect1.position=" + abWithEffect1.position()
-                    );
-            read1=abWithEffect1.capacity();
-            readCapacity1=audioTrack1.write(abWithEffect1, read, AudioTrack.WRITE_BLOCKING);
-
-            Log.d("MAIN","got audioBuffer "
-                    + " read=" + read
-                    + " readCapacity=" + readCapacity
-                    + " ab.capacity=" + ab.capacity()
-                    + " ab.position=" + ab.position()
-                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
-
-            Log.d("MAIN","audioBuffer with effect  "
-                    + " read=" + read
-                    + " readCapacity=" + readCapacity
-                    + " abWithEffect.capacity=" + abWithEffect.capacity()
-                    + " abWithEffect.position=" + abWithEffect.position()
-                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
-
-            Log.d("MAIN","audioBuffer with effect  "
-                    + " read=" + read
-                    + " readCapacity=" + readCapacity
-                    + " abWithEffect1.capacity=" + abWithEffect1.capacity()
-                    + " abWithEffect1.position=" + abWithEffect1.position()
-                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
-
-           //totalSize+=(int)(sizeFactor*read/2);
-            totalSize+=(int)read;
-            //lastBB=ab.duplicate();
-        }
-
-        int numSamples=totalSize;
-        Log.d("MAIN","playRecordedInMemory() numSamples=" + numSamples);
-        audioTrack.setNotificationMarkerPosition(numSamples);  // Set the marker to the end.
-        //audioTrack.setNotificationMarkerPosition(1024);
-        audioTrack.setPlaybackPositionUpdateListener(
-                new AudioTrack.OnPlaybackPositionUpdateListener() {
-                    @Override
-                    public void onPeriodicNotification(AudioTrack track) {}
-                    @Override
-                    public void onMarkerReached(AudioTrack track) {
-                        Log.d("MAIN","audiotrack playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
-                        //track.stop();
-                    }
-                });
-        audioTrack1.setNotificationMarkerPosition(numSamples);  // Set the marker to the end.
-        //audioTrack.setNotificationMarkerPosition(1024);
-        audioTrack1.setPlaybackPositionUpdateListener(
-                new AudioTrack.OnPlaybackPositionUpdateListener() {
-                    @Override
-                    public void onPeriodicNotification(AudioTrack track) {}
-                    @Override
-                    public void onMarkerReached(AudioTrack track) {
-                        Log.d("MAIN","audiotrack1 playRecordedInMemory() onMarkerReached underrun=" + track.getUnderrunCount());
-                        //track.stop();
-                    }
-                });
-        Log.d("MAIN","playRecordedInMemory() last waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
-        //audioTrack.pause();
-        //audioTrack.flush();
-        Log.d("MAIN","playRecordedInMemory() paused and flushed");
-        audioTrack.stop();
-    }
-
-
     //-------------------------------------------------------------------------------------
     private void copyBuffer(String tag,ByteBuffer src, ByteBuffer dest, int start, int count, float factor) {
         //Log.d("Effect", tag + " start=" + start + " count=" + count + " dest.position=" + dest.position());
         if ( (src.capacity() - src.position()) < 2*count) {
-            //Log.d("Effect", tag + " src cannot get count elements");
+            Log.d("Effect", tag + " src cannot get count elements");
             return;
         }
         if ( (dest.capacity() - dest.position()) < 2*count) {
-            //Log.d("Effect", tag + " dest cannot accept elements");
+            Log.d("Effect", tag + " dest cannot accept elements");
             return;
         }
         for (int i = 0; i < count; i++) {
-            dest.putShort((short)(src.getShort(start +2 * i)));
+            dest.putShort((short)(factor*src.getShort(start +2 * i)));
         }
-        //Log.d("Effect",tag + " After copy dest.position=" + dest.position());
+        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
     }
     //-------------------------------------------------------------------------------------
-    private ByteBuffer applyEffect(int delayMs, ByteBuffer ar) {
+    private ByteBuffer applyEffect(int delayMs, ByteBuffer arInit) {
         //Log.d("MAIN", "applyEffect delay=" + delayMs);
-        if (delayMs  <20 || delayMs > 220 ) {
+        if (delayMs  <2 || delayMs > 441 ) {
             //Log.d("MAIN", "applyEffect delayMs out of range");
-            return(ar);
+            return(arInit);
         }
         int samplesGap=delayMs*SAMPLE_RATE/1000;
-        int sizeFactor=2;
-        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize)*sizeFactor);
-        Log.d("MAIN", "applyEffect offset=" + " arn.capacity=" + arn.capacity() + " samples=" + samplesGap);
 
-        boolean copyDelayed=false;
+        // Samples the initial buffer (1 out of 2)
+        // after insertion of the duplicated sample, size will then be equal to the initial size
+        // Arf !!!!!!
+        ByteBuffer ar=ByteBuffer.allocateDirect((bufferSize)/2);
+        for (int i=0; i<arInit.capacity()/2;i+=4) {
+            ar.putShort((short)(arInit.getShort(i)));
+        }
+
+        int sizeFactor=1;
+        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize)*sizeFactor);
+        Log.d("MAIN", "applyEffect offset=" + samplesGap + " arn.capacity=" + arn.capacity() + " samples=" + samplesGap);
         int sampleTotal=ar.capacity()/2;
-        copyBuffer("Init",ar,arn,0,samplesGap,1.0f);
+        copyBuffer("Init",ar,arn,0,samplesGap,0.7f);
         for (int sampleIdx = samplesGap; sampleIdx < sampleTotal; sampleIdx+=samplesGap) {
             int copyIdx;
             copyIdx=2*(sampleIdx - samplesGap);
-            copyBuffer("Old",ar,arn,copyIdx,samplesGap,0.5f);
+            copyBuffer("Old",ar,arn,copyIdx,samplesGap,0.4f);
             copyIdx=2*sampleIdx;
-            copyBuffer("Current",ar,arn,copyIdx,samplesGap,1.0f);
+            copyBuffer("Current",ar,arn,copyIdx,samplesGap,0.7f);
         }
-        copyBuffer("Last",ar,arn,2*(sampleTotal-samplesGap),samplesGap,0.5f);
+        copyBuffer("Last",ar,arn,2*(sampleTotal-samplesGap),samplesGap,0.4f);
         checkBuffer(arn,samplesGap);
         arn.rewind();
         return(arn);
