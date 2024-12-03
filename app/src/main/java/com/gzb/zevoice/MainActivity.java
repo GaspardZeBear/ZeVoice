@@ -74,6 +74,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
     private static final int RECORDINGWILLSTOP = 3;
+    private static final int PLAYON = 4;
+    private static final int PLAYOFF = 5;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
@@ -296,6 +298,9 @@ public class MainActivity extends AppCompatActivity {
                         mRecording.setBackgroundColor(Color.YELLOW);
                         mRecording.setText("Will stop");
                         break;
+                    case PLAYON:
+                        playButton.setEnabled(true);
+                        break;
                     default:
                         Log.d("Main"," handler unknown message : " + (String)msg.obj );
                 }
@@ -387,6 +392,7 @@ public class MainActivity extends AppCompatActivity {
                 startRecording();
                 startButton.setEnabled(false);
                 stopButton.setEnabled(true);
+                playButton.setEnabled(false);
             }
         });
         stopButton.setOnClickListener(new View.OnClickListener() {
@@ -396,6 +402,7 @@ public class MainActivity extends AppCompatActivity {
                 stopRecording();
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
+                playButton.setEnabled(true);
             }
         });
         playButton.setOnClickListener(new View.OnClickListener() {
@@ -404,10 +411,13 @@ public class MainActivity extends AppCompatActivity {
                 stopRecording();
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
+                playButton.setEnabled(false);
                 new Thread(() -> {
-
                     playRecordedInMemory(getFromFile());
+                    SystemClock.sleep(5000);
+                    mHandler.obtainMessage(PLAYON).sendToTarget();
                 }).start();
+                //playButton.setEnabled(true);
             }
         });
 
@@ -475,7 +485,7 @@ public class MainActivity extends AppCompatActivity {
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
         Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
         byte[] audioBuffer = new byte[bufferSize];
-        pitch=0.5f;
+        //pitch=0.5f;
         float pitchFactor=0.5f;
         float[] pitches={2.0f,1.5f,1.0f,0.7f};
         float[] volumes={0.25f,0.5f,0.75f,1f};
@@ -488,12 +498,12 @@ public class MainActivity extends AppCompatActivity {
             }
             PlaybackParams pbp = audioTrack.getPlaybackParams();
             pbp.allowDefaults();
-            pbp.setPitch((float)(pitches[i]));
+            pbp.setPitch((float)(pitch*pitches[i]));
             pbp.setSpeed(speed);
             audioTracks[i].setVolume(volumes[i]);
             audioTracks[i].setPlaybackParams(pbp);
             audioTracks[i].play();
-            pitchFactor += 0.7f;
+            //pitchFactor += 0.7f;
         }
 
         for (ByteBuffer ab : audioBuffers) {
@@ -505,11 +515,13 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 ab.rewind();
+                statsOnByteBuffer("Playing " + String.valueOf(i), ab);
+                ab.rewind();
                 read = ab.capacity();
-                Log.d("MAIN","playRecordedInMemory() writing at="+i);
+                //Log.d("MAIN","playRecordedInMemory() writing at="+i);
                 readCapacity = audioTracks[i].write(ab, read, AudioTrack.WRITE_BLOCKING);
                 //SystemClock.sleep(50);
-                Log.d("MAIN","playRecordedInMemory() wrote at="+i);
+                //Log.d("MAIN","playRecordedInMemory() wrote at="+i);
             };
         }
 
@@ -671,6 +683,7 @@ public class MainActivity extends AppCompatActivity {
         arn.rewind();
         return(arn);
     }
+
     //-------------------------------------------------------------------------------------
     private void checkBuffer(ByteBuffer bb, int offset) {
         int errors=0;
@@ -683,12 +696,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
+    public void statsOnByteBuffer(String tag,ByteBuffer bb) {
+        int loud=0;
+        for (int i=0;i<bb.capacity()/2;i++) {
+            short val=bb.getShort(2*i);
+            if (Math.abs((int)val) > SILENCE ) {
+                loud++;
+            }
+        }
+        bb.rewind();
+        Log.d("MAIN", "statsOnByteBuffer " + tag + " loud="+loud);
+    }
+    //-------------------------------------------------------------------------------------
     public void recordToFile(ArrayList<ByteBuffer> audioBuffers) {
         //final File file = new File(Environment.getExternalStorageDirectory(), "recording.pcm");
         final File file = new File(getFilesDir(), "recording.pcm");
         Log.d("MAIN", "Writing File : " + getFilesDir() +"/recording.pcm");
         try (final FileOutputStream outStream = new FileOutputStream(file)) {
             for (ByteBuffer ab : audioBuffers) {
+                ab.rewind();
+                statsOnByteBuffer("Recording", ab );
+
                 outStream.write(ab.array());
             }
         } catch (IOException e) {
@@ -699,7 +727,7 @@ public class MainActivity extends AppCompatActivity {
 
     //-------------------------------------------------------------------------------------
     public ArrayList<ByteBuffer> getFromFile() {
-        ArrayList<ByteBuffer> arbb=new ArrayList<>();
+        ArrayList<ByteBuffer> arbb=new ArrayList<ByteBuffer>();
         final File file = new File(getFilesDir(), "recording.pcm");
         Log.d("MAIN", "Reading from File : " + getFilesDir() +"/recording.pcm");
         try {
@@ -708,7 +736,11 @@ public class MainActivity extends AppCompatActivity {
             int read;
             while ( (read = bis.read(buffer,0,bufferSize)) != -1) {
                 if (read > 0) {
-                  arbb.add(ByteBuffer.wrap(buffer));
+                  Log.d("MAIN", "Reading from File : got " + read + " bytes");
+                  ByteBuffer ar=ByteBuffer.wrap(buffer);
+                  arbb.add(ar);
+                  ar.rewind();
+                  statsOnByteBuffer("ReadFromFile",ar);
                 }
             }
 

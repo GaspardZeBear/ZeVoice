@@ -118,7 +118,17 @@ tools:context="com.gzb.zevoice.MainActivity">
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="Recording" />
-       </TableRow>
+
+            <TextView
+                android:id="@+id/tduration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.9"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="10dp"
+                android:text="duration" />
+        </TableRow>
     </TableLayout>
 
     <TableLayout android:stretchColumns="*">
@@ -197,21 +207,7 @@ tools:context="com.gzb.zevoice.MainActivity">
         </TableRow>
     </TableLayout>
 
-    <TableLayout android:stretchColumns="*">
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
-            <TextView
-                android:id="@+id/tduration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.9"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:minWidth="10dp"
-                android:text="duration" />
-        </TableRow>
-    </TableLayout>
+
 
     <TableLayout android:stretchColumns="*">
         <TableRow
