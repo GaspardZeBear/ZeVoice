@@ -63,12 +63,13 @@ public class MainActivity extends AppCompatActivity {
     private AudioRecord audioRecord;
     private AudioTrack audioTrack;
     private AudioTrack audioTrack1;
+    private AudioTrack[] audioTracks;
     private int bufferSize;
     private boolean isRecording = false;
     // abs sample value over SILENCE are not SILENCE !
     private static final int SILENCE=10000;
     private static final int CONSECUTIVE_SILENCE_COUNT_MAX=2;
-    private static final int PLAYERSLEEP=100;
+    private static final int PLAYERS=4;
     private static final int RECORDINGDURATION=2500;
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
@@ -100,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
     private Button startButton;
     private Button stopButton;
     private Button playButton;
+    private Button p1Button;
+    private Button p2Button;
+    private Button p3Button;
+    private Button p4Button;
+    private Button[] pButtons;
     private static final int BUFFER_SIZE_FACTOR = 6;
     private Handler mHandler;
 
@@ -118,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
     private int duration=RECORDINGDURATION;
 
 
+    private boolean[] pActive={true,false,false,true};
     // Requesting permission to RECORD_AUDIO
     private boolean permissionToRecordAccepted;
     private boolean permissionToWriteAccepted;
@@ -152,6 +159,17 @@ public class MainActivity extends AppCompatActivity {
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
         playButton = (Button) findViewById(R.id.btnPlay);
+
+        //p1Button=(Button) findViewById(R.id.p1);
+        //p2Button=(Button) findViewById(R.id.p2);
+        //p3Button=(Button) findViewById(R.id.p3);
+        //p4Button=(Button) findViewById(R.id.p4);
+        pButtons=new Button[]{
+                (Button) findViewById(R.id.p1),
+                (Button) findViewById(R.id.p2),
+                (Button) findViewById(R.id.p3),
+                (Button) findViewById(R.id.p4)
+        };
 
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
@@ -208,6 +226,22 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MAIN", "audiorecord Built");
 
         Log.d("MAIN", "audiotrack Build");
+        audioTracks = new AudioTrack[PLAYERS];
+        for (int i=0;i< audioTracks.length; i++) {
+            audioTracks[i]=new AudioTrack.Builder()
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build())
+                    .setAudioFormat(new AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(SAMPLE_RATE)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build())
+                    .setBufferSizeInBytes(3*bufferSize)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build();
+        }
         audioTrack = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -377,6 +411,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        for (int i=0;i<pButtons.length;i++) {
+            int idx=i;
+            pButtons[i].setClickable(true);
+            Log.d("BUTTON", " idx=" + idx + " setting OnClickListener");
+            if ( pButtons[idx].isActivated() ) {
+                pButtons[idx].setBackgroundColor(Color.GREEN);
+            } else {
+                pButtons[idx].setBackgroundColor(Color.GRAY);
+            }
+            pActive[i]=pButtons[i].isActivated();
+            pButtons[idx].setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
+                    pButtons[idx].setActivated(!pButtons[idx].isActivated());
+                    pActive[idx]=!pActive[idx];
+                    pButtons[idx].invalidate();
+                    if ( pButtons[idx].isActivated() ) {
+                        pButtons[idx].setBackgroundColor(Color.GREEN);
+                    } else {
+                        pButtons[idx].setBackgroundColor(Color.GRAY);
+                    }
+
+                    Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
+                }
+            });
+        }
+
         Log.d("LISTENER", "Built");
      }
 
@@ -411,6 +473,56 @@ public class MainActivity extends AppCompatActivity {
 
     //-------------------------------------------------------------------------------------
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
+        Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
+        byte[] audioBuffer = new byte[bufferSize];
+        pitch=0.5f;
+        float pitchFactor=0.5f;
+        float[] pitches={2.0f,1.5f,1.0f,0.7f};
+        float[] volumes={0.25f,0.5f,0.75f,1f};
+        boolean[] pActiveCopy=new boolean[PLAYERS];
+        System.arraycopy(pActive,0,pActiveCopy,0,PLAYERS) ;
+        for (int i=0 ; i < audioTracks.length ; i++ ) {
+            Log.d("MAIN", "playRecordingOnly() player i=" + i + " active=" + pActiveCopy[i]);
+            if (!pActiveCopy[i]) {
+                continue;
+            }
+            PlaybackParams pbp = audioTrack.getPlaybackParams();
+            pbp.allowDefaults();
+            pbp.setPitch((float)(pitches[i]));
+            pbp.setSpeed(speed);
+            audioTracks[i].setVolume(volumes[i]);
+            audioTracks[i].setPlaybackParams(pbp);
+            audioTracks[i].play();
+            pitchFactor += 0.7f;
+        }
+
+        for (ByteBuffer ab : audioBuffers) {
+            int read=0;
+            int readCapacity;
+            //for (AudioTrack at : audioTracks) {
+            for (int i=0 ; i < audioTracks.length ; i++ ) {
+                if (!pActiveCopy[i]) {
+                    continue;
+                }
+                ab.rewind();
+                read = ab.capacity();
+                Log.d("MAIN","playRecordedInMemory() writing at="+i);
+                readCapacity = audioTracks[i].write(ab, read, AudioTrack.WRITE_BLOCKING);
+                //SystemClock.sleep(50);
+                Log.d("MAIN","playRecordedInMemory() wrote at="+i);
+            };
+        }
+
+        for (AudioTrack at : audioTracks) {
+            at.stop();
+        }
+        Log.d("MAIN","playRecordedInMemory() over");
+    }
+
+
+
+    //-------------------------------------------------------------------------------------
+    private void XplayRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
         Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
@@ -692,7 +804,7 @@ public class MainActivity extends AppCompatActivity {
 
                 recordToFile(audioBuffers);
                 playRecordedInMemory(audioBuffers);
-                playRecordedInMemory(getFromFile());
+                //playRecordedInMemory(getFromFile());
               }
         }
 
