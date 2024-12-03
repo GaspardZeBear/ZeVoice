@@ -367,9 +367,13 @@ public class MainActivity extends AppCompatActivity {
         playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                playButton.setEnabled(true);
-                playButton.setEnabled(false);
-                playNow.set(true);
+                stopRecording();
+                startButton.setEnabled(true);
+                stopButton.setEnabled(false);
+                new Thread(() -> {
+
+                    playRecordedInMemory(getFromFile());
+                }).start();
             }
         });
 
@@ -407,7 +411,7 @@ public class MainActivity extends AppCompatActivity {
 
     //-------------------------------------------------------------------------------------
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
-        Log.d("MAIN", "playRecordingOnly() " + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
+        Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
         byte[] audioBuffer = new byte[bufferSize];
         PlaybackParams pbp = audioTrack.getPlaybackParams();
         pbp.allowDefaults();
@@ -420,14 +424,6 @@ public class MainActivity extends AppCompatActivity {
         pbp1.setPitch(2*pitch);
         pbp1.setSpeed(speed);
         audioTrack1.setPlaybackParams(pbp1);
-        //EnvironmentalReverb reverb=new EnvironmentalReverb(1,audioTrack.getAudioSessionId());
-        //PresetReverb reverb=new PresetReverb(1,0);
-        //reverb.setRoomLevel((short)EnvironmentalReverb.PARAM_ROOM_LEVEL);
-        //reverb.setEnabled(true);
-        //audioTrack.attachAuxEffect(reverb.getId());
-        //audioTrack.setAuxEffectSendLevel(1.0f);
-        //audioTrack.setVolume(0.8f);
-        //audioTrack.attachAuxEffect(reverb.getId());
 
         audioTrack.play();
         audioTrack1.play();
@@ -441,18 +437,6 @@ public class MainActivity extends AppCompatActivity {
             int readCapacity;
             int read1;
             int readCapacity1;
-
-            // Normal operation
-            //read=ab.capacity();
-            //readCapacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
-            //------Test sample echo by writing twice ! it works !!!!
-            //sizeFactor=2;
-            //ab.rewind();
-            //readCapacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
-
-
-            // To test home made effect
-            //sizeFactor=2;
             ab.rewind();
             ByteBuffer abWithEffect;
             abWithEffect=applyEffect(0,ab);
@@ -493,7 +477,8 @@ public class MainActivity extends AppCompatActivity {
                     + " abWithEffect1.position=" + abWithEffect1.position()
                     + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
 
-           totalSize+=(int)(sizeFactor*read/2);
+           //totalSize+=(int)(sizeFactor*read/2);
+            totalSize+=(int)read;
             //lastBB=ab.duplicate();
         }
 
@@ -533,25 +518,25 @@ public class MainActivity extends AppCompatActivity {
 
     //-------------------------------------------------------------------------------------
     private void copyBuffer(String tag,ByteBuffer src, ByteBuffer dest, int start, int count, float factor) {
-        Log.d("Effect", tag + " start=" + start + " count=" + count + " dest.position=" + dest.position());
+        //Log.d("Effect", tag + " start=" + start + " count=" + count + " dest.position=" + dest.position());
         if ( (src.capacity() - src.position()) < 2*count) {
-            Log.d("Effect", tag + " src cannot get count elements");
+            //Log.d("Effect", tag + " src cannot get count elements");
             return;
         }
         if ( (dest.capacity() - dest.position()) < 2*count) {
-            Log.d("Effect", tag + " dest cannot accept elements");
+            //Log.d("Effect", tag + " dest cannot accept elements");
             return;
         }
         for (int i = 0; i < count; i++) {
             dest.putShort((short)(src.getShort(start +2 * i)));
         }
-        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
+        //Log.d("Effect",tag + " After copy dest.position=" + dest.position());
     }
     //-------------------------------------------------------------------------------------
     private ByteBuffer applyEffect(int delayMs, ByteBuffer ar) {
-        Log.d("MAIN", "applyEffect delay=" + delayMs);
+        //Log.d("MAIN", "applyEffect delay=" + delayMs);
         if (delayMs  <20 || delayMs > 220 ) {
-            Log.d("MAIN", "applyEffect delayMs out of range");
+            //Log.d("MAIN", "applyEffect delayMs out of range");
             return(ar);
         }
         int samplesGap=delayMs*SAMPLE_RATE/1000;
@@ -586,45 +571,46 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //-------------------------------------------------------------------------------------
-    private ByteBuffer XapplyEffect(ByteBuffer ar) {
-        Log.d("MAIN", "applyEffect " );
-        int sizeFactor=2;
-        int offset=3;
-        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize+offset)*sizeFactor);
-        Log.d("MAIN", "applyEffect offset=" + offset + " arn.capacity=" + arn.capacity());
-
-        int nbEchoInsertedBlocks=0;
-        int insertedEcho=0;
-        for (int i = 0; i < ar.capacity()  ; i+=2) {
-            short b1=ar.getShort(i);
-            //short b0=ar.getShort(i-delay);
-            int iPos=i + ((offset+1)*nbEchoInsertedBlocks);
-            arn.putShort( iPos, (short)(b1));
-            arn.putShort( iPos+2*offset, (short)(b1));
-            insertedEcho++;
-            if ( insertedEcho >= offset+1) {
-                insertedEcho=0;
-                nbEchoInsertedBlocks++;
+    public void recordToFile(ArrayList<ByteBuffer> audioBuffers) {
+        //final File file = new File(Environment.getExternalStorageDirectory(), "recording.pcm");
+        final File file = new File(getFilesDir(), "recording.pcm");
+        Log.d("MAIN", "Writing File : " + getFilesDir() +"/recording.pcm");
+        try (final FileOutputStream outStream = new FileOutputStream(file)) {
+            for (ByteBuffer ab : audioBuffers) {
+                outStream.write(ab.array());
             }
-            if (i < 20) {
-                Log.d("Echo ", " vals "
-                        + " i=" + i
-                        + " offset=" + offset
-                        + " iPos=" + iPos
-                        + " echoPos=" + iPos+2*offset
-                        + " insertedEcho=" + insertedEcho
-                        + " nbEchoInsertedBlocks=" + nbEchoInsertedBlocks
-                );
-            }
-
-            //arn.putShort(i+bufferSize,(short)( b1) );            //arn.putShort(i-delay,b1);
-            //arn.putShort(i+bufferSize,(short)( b1) );            //arn.putShort(i-delay,b1);
+        } catch (IOException e) {
+            Log.d("MAIN","Exception");
+            throw new RuntimeException("Writing of recorded audio failed", e);
         }
-        arn.rewind();
-        return(arn);
     }
 
-        //======================================================================================================================
+    //-------------------------------------------------------------------------------------
+    public ArrayList<ByteBuffer> getFromFile() {
+        ArrayList<ByteBuffer> arbb=new ArrayList<>();
+        final File file = new File(getFilesDir(), "recording.pcm");
+        Log.d("MAIN", "Reading from File : " + getFilesDir() +"/recording.pcm");
+        try {
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+            byte[] buffer = new byte[bufferSize];
+            int read;
+            while ( (read = bis.read(buffer,0,bufferSize)) != -1) {
+                if (read > 0) {
+                  arbb.add(ByteBuffer.wrap(buffer));
+                }
+            }
+
+        } catch (IOException e) {
+            Log.d("MAIN","Exception");
+            throw new RuntimeException("Writing of recorded audio failed", e);
+        }
+        Log.d("MAIN","Read audiobuffer : " + arbb.size());
+        return(arbb);
+    }
+
+
+
+    //======================================================================================================================
     private class RecordingInMemoryRunnable implements Runnable {
 
         private Handler handler;
@@ -704,7 +690,9 @@ public class MainActivity extends AppCompatActivity {
                         + " kept Buffers=" + notDiscarded
                         + " getBufferSizeInFrames= " + audioRecord.getBufferSizeInFrames());
 
+                recordToFile(audioBuffers);
                 playRecordedInMemory(audioBuffers);
+                playRecordedInMemory(getFromFile());
               }
         }
 
