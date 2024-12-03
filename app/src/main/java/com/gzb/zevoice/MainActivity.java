@@ -217,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
                         .setSampleRate(SAMPLE_RATE)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build())
-                .setBufferSizeInBytes(bufferSize)
+                .setBufferSizeInBytes(3*bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
         Log.d("MAIN", "audiotrack Built");
@@ -400,29 +400,59 @@ public class MainActivity extends AppCompatActivity {
         pbp.setPitch(pitch);
         pbp.setSpeed(speed);
         audioTrack.setPlaybackParams(pbp);
-        EnvironmentalReverb reverb=new EnvironmentalReverb(1,audioTrack.getAudioSessionId());
+        //EnvironmentalReverb reverb=new EnvironmentalReverb(1,audioTrack.getAudioSessionId());
         //PresetReverb reverb=new PresetReverb(1,0);
-        reverb.setRoomLevel((short)EnvironmentalReverb.PARAM_ROOM_LEVEL);
-        reverb.setEnabled(true);
+        //reverb.setRoomLevel((short)EnvironmentalReverb.PARAM_ROOM_LEVEL);
+        //reverb.setEnabled(true);
         //audioTrack.attachAuxEffect(reverb.getId());
-        audioTrack.setAuxEffectSendLevel(1.0f);
-        audioTrack.setVolume(0.8f);
-        audioTrack.attachAuxEffect(reverb.getId());
+        //audioTrack.setAuxEffectSendLevel(1.0f);
+        //audioTrack.setVolume(0.8f);
+        //audioTrack.attachAuxEffect(reverb.getId());
 
         audioTrack.play();
 
         int totalSize=0;
+        int sizeFactor=1;
         ByteBuffer lastBB=null;
         for (ByteBuffer ab : audioBuffers) {
-            //int read=ab.capacity();
-            int read=ab.capacity();
+            int read;
+            int readCapacity;
+
+            // Normal operation
+            //read=ab.capacity();
+            //readCapacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
+            //------Test sample echo by writing twice ! it works !!!!
+            //sizeFactor=2;
+            //ab.rewind();
+            //readCapacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
+
+
+            // To test home made effect
+            //sizeFactor=2;
+            ByteBuffer abWithEffect;
+            abWithEffect=applyEffect(100,ab);
+            Log.d("MAIN","abWithEffect just after init  "
+                    + " abWithEffect.capacity=" + abWithEffect.capacity()
+                    + " abWithEffect.position=" + abWithEffect.position()
+                    );
+            read=abWithEffect.capacity();
+            readCapacity=audioTrack.write(abWithEffect, read, AudioTrack.WRITE_BLOCKING);
+
             Log.d("MAIN","got audioBuffer "
-                    + " capacity=" + ab.capacity()
-                    + " position=" + ab.position()
+                    + " read=" + read
+                    + " readCapacity=" + readCapacity
+                    + " ab.capacity=" + ab.capacity()
+                    + " ab.position=" + ab.position()
                     + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
-            int capacity=audioTrack.write(ab, read, AudioTrack.WRITE_BLOCKING);
-            Log.d("MAIN","after write capacity=" + capacity);
-            totalSize+=(int)read/2;
+
+            Log.d("MAIN","audioBuffer with effect  "
+                    + " read=" + read
+                    + " readCapacity=" + readCapacity
+                    + " abWithEffect.capacity=" + abWithEffect.capacity()
+                    + " abWithEffect.position=" + abWithEffect.position()
+                    + " bufferSizeInFrames=" + audioRecord.getBufferSizeInFrames());
+
+           totalSize+=(int)(sizeFactor*read/2);
             //lastBB=ab.duplicate();
         }
 
@@ -441,23 +471,108 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-        //while( audioTrack.getPlaybackHeadPosition() < totalSize) {
-        //    Log.d("MAIN","playRecordedInMemory() waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
-        //    SystemClock.sleep(PLAYERSLEEP);
-        //}
-
-
-        //SystemClock.sleep(5000);
         Log.d("MAIN","playRecordedInMemory() last waking up headPosition=" + audioTrack.getPlaybackHeadPosition() + " toPlay=" + totalSize);
         //audioTrack.pause();
         //audioTrack.flush();
         Log.d("MAIN","playRecordedInMemory() paused and flushed");
         audioTrack.stop();
-        //audioTrack.release();
     }
 
 
-    //======================================================================================================================
+    //-------------------------------------------------------------------------------------
+    private void copyBuffer(String tag,ByteBuffer src, ByteBuffer dest, int start, int count, float factor) {
+        Log.d("Effect", tag + " start=" + start + " count=" + count + " dest.position=" + dest.position());
+        if ( (src.capacity() - src.position()) < 2*count) {
+            Log.d("Effect", tag + " src cannot get count elements");
+            return;
+        }
+        if ( (dest.capacity() - dest.position()) < 2*count) {
+            Log.d("Effect", tag + " dest cannot accept elements");
+            return;
+        }
+        for (int i = 0; i < count; i++) {
+            dest.putShort((short)(src.getShort(start +2 * i)));
+        }
+        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
+    }
+    //-------------------------------------------------------------------------------------
+    private ByteBuffer applyEffect(int delayMs, ByteBuffer ar) {
+        Log.d("MAIN", "applyEffect delay=" + delayMs);
+        if (delayMs  <20 || delayMs > 220 ) {
+            Log.d("MAIN", "applyEffect delayMs out of range");
+            return(ar);
+        }
+        int samplesGap=delayMs*SAMPLE_RATE/1000;
+        int sizeFactor=2;
+        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize)*sizeFactor);
+        Log.d("MAIN", "applyEffect offset=" + " arn.capacity=" + arn.capacity() + " samples=" + samplesGap);
+
+        boolean copyDelayed=false;
+        int sampleTotal=ar.capacity()/2;
+        copyBuffer("Init",ar,arn,0,samplesGap,1.0f);
+        for (int sampleIdx = samplesGap; sampleIdx < sampleTotal; sampleIdx+=samplesGap) {
+            int copyIdx;
+            copyIdx=2*(sampleIdx - samplesGap);
+            copyBuffer("Old",ar,arn,copyIdx,samplesGap,0.5f);
+            copyIdx=2*sampleIdx;
+            copyBuffer("Current",ar,arn,copyIdx,samplesGap,1.0f);
+        }
+        copyBuffer("Last",ar,arn,2*(sampleTotal-samplesGap),samplesGap,0.5f);
+        checkBuffer(arn,samplesGap);
+        arn.rewind();
+        return(arn);
+    }
+    //-------------------------------------------------------------------------------------
+    private void checkBuffer(ByteBuffer bb, int offset) {
+        int errors=0;
+        for (int i=0; i<bb.capacity()/2;i+=2) {
+            if (bb.getShort(i) != bb.getShort(i+offset)) {
+                errors++;
+            }
+        }
+        Log.d("MAIN", "checkBuffers errors=" + errors);
+    }
+
+    //-------------------------------------------------------------------------------------
+    private ByteBuffer XapplyEffect(ByteBuffer ar) {
+        Log.d("MAIN", "applyEffect " );
+        int sizeFactor=2;
+        int offset=3;
+        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize+offset)*sizeFactor);
+        Log.d("MAIN", "applyEffect offset=" + offset + " arn.capacity=" + arn.capacity());
+
+        int nbEchoInsertedBlocks=0;
+        int insertedEcho=0;
+        for (int i = 0; i < ar.capacity()  ; i+=2) {
+            short b1=ar.getShort(i);
+            //short b0=ar.getShort(i-delay);
+            int iPos=i + ((offset+1)*nbEchoInsertedBlocks);
+            arn.putShort( iPos, (short)(b1));
+            arn.putShort( iPos+2*offset, (short)(b1));
+            insertedEcho++;
+            if ( insertedEcho >= offset+1) {
+                insertedEcho=0;
+                nbEchoInsertedBlocks++;
+            }
+            if (i < 20) {
+                Log.d("Echo ", " vals "
+                        + " i=" + i
+                        + " offset=" + offset
+                        + " iPos=" + iPos
+                        + " echoPos=" + iPos+2*offset
+                        + " insertedEcho=" + insertedEcho
+                        + " nbEchoInsertedBlocks=" + nbEchoInsertedBlocks
+                );
+            }
+
+            //arn.putShort(i+bufferSize,(short)( b1) );            //arn.putShort(i-delay,b1);
+            //arn.putShort(i+bufferSize,(short)( b1) );            //arn.putShort(i-delay,b1);
+        }
+        arn.rewind();
+        return(arn);
+    }
+
+        //======================================================================================================================
     private class RecordingInMemoryRunnable implements Runnable {
 
         private Handler handler;
