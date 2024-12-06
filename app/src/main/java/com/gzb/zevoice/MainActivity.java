@@ -427,14 +427,13 @@ public class MainActivity extends AppCompatActivity {
                     mHandler.obtainMessage(BUTTONPLAYON).sendToTarget();
                     mHandler.obtainMessage(BUTTONSTARTON).sendToTarget();
                 }).start();
-                //playButton.setEnabled(true);
             }
         });
         breakButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.d("RECORD", "break Button");
-                playButton.setActivated(true);
+                breakButton.setActivated(true);
             }
         });
         for (int i=0;i<pButtons.length;i++) {
@@ -452,14 +451,12 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
                     pButtons[idx].setActivated(!pButtons[idx].isActivated());
-                    //pActive[idx]=!pActive[idx];
                     pButtons[idx].invalidate();
                     if ( pButtons[idx].isActivated() ) {
                         pButtons[idx].setBackgroundColor(Color.GREEN);
                     } else {
                         pButtons[idx].setBackgroundColor(Color.GRAY);
                     }
-
                     Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
                 }
             });
@@ -500,18 +497,10 @@ public class MainActivity extends AppCompatActivity {
     //-------------------------------------------------------------------------------------
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
         Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
-        byte[] audioBuffer = new byte[bufferSize];
-        //pitch=0.5f;
-        float pitchFactor=0.5f;
         float[] pitches={2.0f,1.5f,1.0f,0.7f};
         float[] volumes={0.25f,0.5f,0.75f,1f};
-        //boolean[] pActiveCopy=new boolean[PLAYERS];
-        //System.arraycopy(pActive,0,pActiveCopy,0,PLAYERS) ;
         for (int i=0 ; i < audioTracks.length ; i++ ) {
             Log.d("MAIN", "playRecordingOnly() player i=" + i );
-            //if (!pActiveCopy[i]) {
-            //    continue;
-            //}
             PlaybackParams pbp = audioTrack.getPlaybackParams();
             pbp.allowDefaults();
             pbp.setPitch((float)(pitch*pitches[i]));
@@ -519,14 +508,12 @@ public class MainActivity extends AppCompatActivity {
             audioTracks[i].setVolume(volumes[i]);
             audioTracks[i].setPlaybackParams(pbp);
             audioTracks[i].play();
-            //pitchFactor += 0.7f;
         }
 
         for (ByteBuffer ab : audioBuffers) {
             int read=0;
             int readWithEffect=0;
             int readCapacity;
-            //for (AudioTrack at : audioTracks) {
             ByteBuffer abWithEffect;
             abWithEffect=applyEffect(50,ab);
             readWithEffect=abWithEffect.capacity();
@@ -537,8 +524,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 ab.rewind();
                 abWithEffect.rewind();
-                //read = ab.capacity();
-                //audioTracks[i].write(ab, read, AudioTrack.WRITE_BLOCKING);
                 audioTracks[i].write(ab, readWithEffect, AudioTrack.WRITE_BLOCKING);
             };
         }
@@ -563,7 +548,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < count; i++) {
             dest.putShort((short)(factor*src.getShort(start +2 * i)));
         }
-        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
+        //Log.d("Effect",tag + " After copy dest.position=" + dest.position());
     }
     //-------------------------------------------------------------------------------------
     private ByteBuffer applyEffect(int delayMs, ByteBuffer arInit) {
@@ -705,6 +690,7 @@ public class MainActivity extends AppCompatActivity {
                 String exitReason="";
                 //while ((System.currentTimeMillis() - start) < duration || consecutiveSilenceCount > CONSECUTIVE_SILENCE_COUNT_MAX) {
                 while (true) {
+                    //Log.d("Break"," button " + breakButton.isActivated());
                     if ( breakButton.isActivated() ) {
                         exitReason="Break";
                         handler.obtainMessage(BUTTONBREAKOFF).sendToTarget();
