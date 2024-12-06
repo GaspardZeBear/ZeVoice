@@ -78,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int BUTTONPLAYOFF = 5;
     private static final int BUTTONSTARTON = 6;
     private static final int BUTTONSTARTOFF = 7;
+    private static final int BUTTONBREAKOFF = 9;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
@@ -97,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
     private Button durationplusplus;
     private Button silenceminus;
     private Button silenceplus;
+
     private TextView tduration;
     private TextView tsilence;
     private TextView tspeed;
@@ -105,10 +107,8 @@ public class MainActivity extends AppCompatActivity {
     private Button startButton;
     private Button stopButton;
     private Button playButton;
-    private Button p1Button;
-    private Button p2Button;
-    private Button p3Button;
-    private Button p4Button;
+    private Button breakButton;
+
     private Button[] pButtons;
     private static final int BUFFER_SIZE_FACTOR = 6;
     private Handler mHandler;
@@ -163,18 +163,14 @@ public class MainActivity extends AppCompatActivity {
         startButton = (Button) findViewById(R.id.btnStart);
         stopButton = (Button) findViewById(R.id.btnStop);
         playButton = (Button) findViewById(R.id.btnPlay);
+        breakButton = (Button) findViewById(R.id.btnBreak);
 
-        //p1Button=(Button) findViewById(R.id.p1);
-        //p2Button=(Button) findViewById(R.id.p2);
-        //p3Button=(Button) findViewById(R.id.p3);
-        //p4Button=(Button) findViewById(R.id.p4);
         pButtons=new Button[]{
                 (Button) findViewById(R.id.p1),
                 (Button) findViewById(R.id.p2),
                 (Button) findViewById(R.id.p3),
                 (Button) findViewById(R.id.p4)
         };
-
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
@@ -312,6 +308,9 @@ public class MainActivity extends AppCompatActivity {
                     case BUTTONSTARTOFF:
                         startButton.setEnabled(false);
                         break;
+                    case BUTTONBREAKOFF:
+                        breakButton.setActivated(false);
+                        break;
                     default:
                         Log.d("Main"," handler unknown message : " + (String)msg.obj );
                 }
@@ -431,7 +430,13 @@ public class MainActivity extends AppCompatActivity {
                 //playButton.setEnabled(true);
             }
         });
-
+        breakButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d("RECORD", "break Button");
+                playButton.setActivated(true);
+            }
+        });
         for (int i=0;i<pButtons.length;i++) {
             int idx=i;
             pButtons[i].setClickable(true);
@@ -441,13 +446,13 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 pButtons[idx].setBackgroundColor(Color.GRAY);
             }
-            pActive[i]=pButtons[i].isActivated();
+            //pActive[i]=pButtons[i].isActivated();
             pButtons[idx].setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
                     pButtons[idx].setActivated(!pButtons[idx].isActivated());
-                    pActive[idx]=!pActive[idx];
+                    //pActive[idx]=!pActive[idx];
                     pButtons[idx].invalidate();
                     if ( pButtons[idx].isActivated() ) {
                         pButtons[idx].setBackgroundColor(Color.GREEN);
@@ -500,13 +505,13 @@ public class MainActivity extends AppCompatActivity {
         float pitchFactor=0.5f;
         float[] pitches={2.0f,1.5f,1.0f,0.7f};
         float[] volumes={0.25f,0.5f,0.75f,1f};
-        boolean[] pActiveCopy=new boolean[PLAYERS];
-        System.arraycopy(pActive,0,pActiveCopy,0,PLAYERS) ;
+        //boolean[] pActiveCopy=new boolean[PLAYERS];
+        //System.arraycopy(pActive,0,pActiveCopy,0,PLAYERS) ;
         for (int i=0 ; i < audioTracks.length ; i++ ) {
-            Log.d("MAIN", "playRecordingOnly() player i=" + i + " active=" + pActiveCopy[i]);
-            if (!pActiveCopy[i]) {
-                continue;
-            }
+            Log.d("MAIN", "playRecordingOnly() player i=" + i );
+            //if (!pActiveCopy[i]) {
+            //    continue;
+            //}
             PlaybackParams pbp = audioTrack.getPlaybackParams();
             pbp.allowDefaults();
             pbp.setPitch((float)(pitch*pitches[i]));
@@ -527,7 +532,7 @@ public class MainActivity extends AppCompatActivity {
             readWithEffect=abWithEffect.capacity();
             read = ab.capacity();
             for (int i=0 ; i < audioTracks.length ; i++ ) {
-                if (!pActiveCopy[i]) {
+                if (!pButtons[i].isActivated()) {
                     continue;
                 }
                 ab.rewind();
@@ -659,10 +664,6 @@ public class MainActivity extends AppCompatActivity {
                   statsOnByteBuffer("ReadFromFile",ar);
                   ar.rewind();
                   boolean b=arbb.add(ar);
-                  //Log.d("MAIN", "Reading from File, adding to arbb.add="+b);
-                  if ( idx> 0) {
-                      //statsOnByteBuffer("i-1 : prev ",arbb.get(i-1));
-                  }
                   idx++;
                 }
             }
@@ -704,6 +705,11 @@ public class MainActivity extends AppCompatActivity {
                 String exitReason="";
                 //while ((System.currentTimeMillis() - start) < duration || consecutiveSilenceCount > CONSECUTIVE_SILENCE_COUNT_MAX) {
                 while (true) {
+                    if ( breakButton.isActivated() ) {
+                        exitReason="Break";
+                        handler.obtainMessage(BUTTONBREAKOFF).sendToTarget();
+                        break;
+                    }
                     if ( (System.currentTimeMillis() - start) > duration ) {
                         exitReason="Duration";
                         break;

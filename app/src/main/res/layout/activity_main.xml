@@ -89,20 +89,26 @@ tools:context="com.gzb.zevoice.MainActivity">
             android:layout_height="match_parent" >
             <Button
                 android:id="@+id/btnStart"
-                android:layout_width="50dp"
+                android:layout_width="40dp"
                 android:layout_height="wrap_content"
-                android:text="Start" />
+                android:text="On" />
 
             <Button
                 android:id="@+id/btnStop"
-                android:layout_width="50dp"
+                android:layout_width="40dp"
                 android:layout_height="wrap_content"
-                android:text="Stop" />
+                android:text="Off" />
+            <Button
+                android:id="@+id/btnBreak"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:text="Brk" />
 
             <Button
                 android:id="@+id/btnPlay"
-                android:layout_width="50dp"
+                android:layout_width="40dp"
                 android:layout_height="wrap_content"
+                android:textSize="15dp"
                 android:text="Play" />
 
         </TableRow>
