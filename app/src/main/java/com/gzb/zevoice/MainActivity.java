@@ -83,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private static final int PCMBUFFER = 1;
 
+    private static final int MINDURATION = 500;
+    private static final int MAXDURATION = 15000;
     private static final int SAMPLE_RATE = 44100;
     private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
@@ -369,28 +371,28 @@ public class MainActivity extends AppCompatActivity {
         durationplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration+=100;
+                duration=modifyDuration(duration,100);
                 tduration.setText(String.format("%d",duration));
             }
         });
         durationplusplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration+=1000;
+                duration=modifyDuration(duration,1000);
                 tduration.setText(String.format("%d",duration));
             }
         });
         durationminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration-=100;
+                duration=modifyDuration(duration,-100);
                 tduration.setText(String.format("%d",duration));
             }
         });
         durationminusminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration-=1000;
+                duration=modifyDuration(duration,-1000);
                 tduration.setText(String.format("%d",duration));
             }
         });
@@ -465,7 +467,19 @@ public class MainActivity extends AppCompatActivity {
         Log.d("LISTENER", "Built");
      }
 
+
     //-------------------------------------------------------------------------------------
+    private int modifyDuration(int duration, int offset) {
+        if ( (duration + offset) > MAXDURATION ) {
+           return(MAXDURATION);
+        }
+        if ( (duration + offset) < MINDURATION ) {
+            return(MINDURATION);
+        }
+        return(duration + offset);
+    }
+
+        //-------------------------------------------------------------------------------------
     private void startRecording() {
         Log.d("MAIN", "startRecordingWithFile()");
         String[] permissionRecordAudio = {Manifest.permission.RECORD_AUDIO};
@@ -548,7 +562,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < count; i++) {
             dest.putShort((short)(factor*src.getShort(start +2 * i)));
         }
-        //Log.d("Effect",tag + " After copy dest.position=" + dest.position());
+        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
     }
     //-------------------------------------------------------------------------------------
     private ByteBuffer applyEffect(int delayMs, ByteBuffer arInit) {
@@ -558,18 +572,18 @@ public class MainActivity extends AppCompatActivity {
             return(arInit);
         }
         int samplesGap=delayMs*SAMPLE_RATE/1000;
-
+        statsOnByteBuffer("Initial buffer",arInit);
         // Samples the initial buffer (1 out of 2)
         // after insertion of the duplicated sample, size will then be equal to the initial size
         // Arf !!!!!!
-        ByteBuffer ar=ByteBuffer.allocateDirect((bufferSize)/2);
-        for (int i=0; i<arInit.capacity()/2;i+=4) {
+        ByteBuffer ar=ByteBuffer.allocateDirect(arInit.capacity()/2);
+        for (int i=0; i<ar.capacity();i+=4) {
             ar.putShort((short)(arInit.getShort(i)));
         }
+        statsOnByteBuffer("Reduced buffer",ar);
 
-        int sizeFactor=1;
-        ByteBuffer arn = ByteBuffer.allocateDirect((bufferSize)*sizeFactor);
-        Log.d("MAIN", "applyEffect offset=" + samplesGap + " arn.capacity=" + arn.capacity() + " samples=" + samplesGap);
+        ByteBuffer arn = ByteBuffer.allocateDirect(arInit.capacity());
+        Log.d("MAIN", "applyEffect offset=" + samplesGap + " arn.capacity=" + arn.capacity() );
         int sampleTotal=ar.capacity()/2;
         copyBuffer("Init",ar,arn,0,samplesGap,0.7f);
         for (int sampleIdx = samplesGap; sampleIdx < sampleTotal; sampleIdx+=samplesGap) {
@@ -581,6 +595,7 @@ public class MainActivity extends AppCompatActivity {
         }
         copyBuffer("Last",ar,arn,2*(sampleTotal-samplesGap),samplesGap,0.4f);
         checkBuffer(arn,samplesGap);
+        statsOnByteBuffer("ARN stats",arn);
         arn.rewind();
         return(arn);
     }
@@ -704,11 +719,11 @@ public class MainActivity extends AppCompatActivity {
                         exitReason="Silence";
                         break;
                     }
-                    if ( playNow.get() )  {
+                    //if ( playNow.get() )  {
 
-                        exitReason="Playnow";
-                        break;
-                    }
+                    //    exitReason="Playnow";
+                    //    break;
+                    //}
                     ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
                     int result = audioRecord.read(buffer, bufferSize);
 
