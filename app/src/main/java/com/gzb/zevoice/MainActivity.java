@@ -67,10 +67,10 @@ public class MainActivity extends AppCompatActivity {
     private int bufferSize;
     private boolean isRecording = false;
     // abs sample value over SILENCE are not SILENCE !
-    private static final int SILENCE=10000;
-    private static final int CONSECUTIVE_SILENCE_COUNT_MAX=2;
-    private static final int PLAYERS=4;
-    private static final int RECORDINGDURATION=2500;
+    public static final int SILENCE = 10000;
+    private static final int CONSECUTIVE_SILENCE_COUNT_MAX = 2;
+    private static final int PLAYERS = 4;
+    private static final int RECORDINGDURATION = 2500;
     private static final int RECORDINGON = 1;
     private static final int RECORDINGOFF = 2;
     private static final int RECORDINGWILLSTOP = 3;
@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int MINDURATION = 500;
     private static final int MAXDURATION = 15000;
-    private static final int SAMPLE_RATE = 44100;
+    public static final int SAMPLE_RATE = 44100;
     private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 
@@ -124,13 +124,13 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private ActivityResultLauncher<Intent> launcher;
     String fName;
-    private volatile float pitch=1.5f;
-    private volatile float speed=1.0f;
-    private int silence=SILENCE;
-    private int duration=RECORDINGDURATION;
+    private volatile float pitch = 1.5f;
+    private volatile float speed = 1.0f;
+    private int silence = SILENCE;
+    private int duration = RECORDINGDURATION;
 
 
-    private boolean[] pActive={true,false,false,true};
+    private boolean[] pActive = {true, false, false, true};
     // Requesting permission to RECORD_AUDIO
     private boolean permissionToRecordAccepted;
     private boolean permissionToWriteAccepted;
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
     private SoundPool soundPool;
 
-    public AudioFeeder audioFeeder ;
+    public AudioFeeder audioFeeder;
     public ByteBuffer mySound;
 
     //-------------------------------------------------------------------------------------
@@ -167,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
         playButton = (Button) findViewById(R.id.btnPlay);
         breakButton = (Button) findViewById(R.id.btnBreak);
 
-        pButtons=new Button[]{
+        pButtons = new Button[]{
                 (Button) findViewById(R.id.p1),
                 (Button) findViewById(R.id.p2),
                 (Button) findViewById(R.id.p3),
@@ -176,13 +176,13 @@ public class MainActivity extends AppCompatActivity {
 
         bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT)*BUFFER_SIZE_FACTOR;
+                AudioFormat.ENCODING_PCM_16BIT) * BUFFER_SIZE_FACTOR;
         //pitch=1.5f;
         //speed=1.5f;
-        tspeed.setText(String.format("%.1f",speed));
-        tpitch.setText(String.format("%.1f",pitch));
-        tsilence.setText(String.format("%d",silence));
-        tduration.setText(String.format("%d",duration));
+        tspeed.setText(String.format("%.1f", speed));
+        tpitch.setText(String.format("%.1f", pitch));
+        tsilence.setText(String.format("%d", silence));
+        tduration.setText(String.format("%d", duration));
 
         //bufferSize=32767*1024;
         Log.d("MAIN", "Buffersize=" + String.valueOf(bufferSize));
@@ -191,14 +191,14 @@ public class MainActivity extends AppCompatActivity {
         // Requesting permission to RECORD_AUDIO
         permissionToRecordAccepted = false;
         //permissionToWriteAccepted = false;
-        context=context;
+        context = context;
 
         //String[] permissionWriteExternalStorage = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
         ByteBuffer mySound = ByteBuffer.allocateDirect(bufferSize);
-        for (short i = 0; i < mySound.capacity()/2 ; i++) {
-            short sin0=(short) ( (Math.sin((double)i) + Math.sin((double)(i+1000)) ));
-            mySound.putShort((short)i);
+        for (short i = 0; i < mySound.capacity() / 2; i++) {
+            short sin0 = (short) ((Math.sin((double) i) + Math.sin((double) (i + 1000))));
+            mySound.putShort((short) i);
         }
 
         //---------------------------------------------------------------------------------------------------------------
@@ -229,8 +229,8 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d("MAIN", "audiotrack Build");
         audioTracks = new AudioTrack[PLAYERS];
-        for (int i=0;i< audioTracks.length; i++) {
-            audioTracks[i]=new AudioTrack.Builder()
+        for (int i = 0; i < audioTracks.length; i++) {
+            audioTracks[i] = new AudioTrack.Builder()
                     .setAudioAttributes(new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -240,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
                             .setSampleRate(SAMPLE_RATE)
                             .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                             .build())
-                    .setBufferSizeInBytes(3*bufferSize)
+                    .setBufferSizeInBytes(3 * bufferSize)
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build();
         }
@@ -254,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
                         .setSampleRate(SAMPLE_RATE)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build())
-                .setBufferSizeInBytes(3*bufferSize)
+                .setBufferSizeInBytes(3 * bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
 
@@ -268,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
                         .setSampleRate(SAMPLE_RATE)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build())
-                .setBufferSizeInBytes(3*bufferSize)
+                .setBufferSizeInBytes(3 * bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
         Log.d("MAIN", "audiotrack Built");
@@ -277,23 +277,23 @@ public class MainActivity extends AppCompatActivity {
         //Thread tAudioFeeder = new Thread(audioFeeder,"AudioFeeder");
         //tAudioFeeder.start();
 
-        mHandler = new Handler(Looper.getMainLooper()){
+        mHandler = new Handler(Looper.getMainLooper()) {
             @Override
-            public void handleMessage(Message msg){
-                switch(msg.what) {
-                    case RECORDINGON :
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case RECORDINGON:
                         mRecording.setTextColor(Color.GREEN);
                         mRecording.setBackgroundColor(Color.GREEN);
                         //mRecording.setText("Recording");
                         //long left=(long)(msg.obj)/1000;
                         mRecording.setText(String.valueOf(msg.obj));
                         break;
-                    case RECORDINGOFF :
+                    case RECORDINGOFF:
                         mRecording.setTextColor(Color.RED);
                         mRecording.setBackgroundColor(Color.RED);
                         mRecording.setText("Not Recording");
                         break;
-                    case RECORDINGWILLSTOP :
+                    case RECORDINGWILLSTOP:
                         mRecording.setTextColor(Color.RED);
                         mRecording.setBackgroundColor(Color.YELLOW);
                         mRecording.setText("Will stop");
@@ -314,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
                         breakButton.setActivated(false);
                         break;
                     default:
-                        Log.d("Main"," handler unknown message : " + (String)msg.obj );
+                        Log.d("Main", " handler unknown message : " + (String) msg.obj);
                 }
             }
         };
@@ -323,77 +323,77 @@ public class MainActivity extends AppCompatActivity {
         pplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch+=0.1f;
-                tpitch.setText(String.format("%.1f",pitch));
+                pitch += 0.1f;
+                tpitch.setText(String.format("%.1f", pitch));
             }
         });
         pminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pitch-=0.1f;
-                tpitch.setText(String.format("%.1f",pitch));
+                pitch -= 0.1f;
+                tpitch.setText(String.format("%.1f", pitch));
             }
         });
         splus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if ( speed <= 2) {
+                if (speed <= 2) {
                     speed += 0.1f;
                 }
-                tspeed.setText(String.format("%.1f",speed));
+                tspeed.setText(String.format("%.1f", speed));
             }
         });
         sminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if ( speed > 0.5) {
+                if (speed > 0.5) {
                     speed -= 0.1f;
                 }
-                tspeed.setText(String.format("%.1f",speed));
+                tspeed.setText(String.format("%.1f", speed));
             }
         });
 
         silenceplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                silence+=1000;
-                tsilence.setText(String.format("%d",silence));
+                silence += 1000;
+                tsilence.setText(String.format("%d", silence));
             }
         });
         silenceminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                silence-=1000;
-                tsilence.setText(String.format("%d",silence));
+                silence -= 1000;
+                tsilence.setText(String.format("%d", silence));
             }
         });
 
         durationplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration=modifyDuration(duration,100);
-                tduration.setText(String.format("%d",duration));
+                duration = modifyDuration(duration, 100);
+                tduration.setText(String.format("%d", duration));
             }
         });
         durationplusplus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration=modifyDuration(duration,1000);
-                tduration.setText(String.format("%d",duration));
+                duration = modifyDuration(duration, 1000);
+                tduration.setText(String.format("%d", duration));
             }
         });
         durationminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration=modifyDuration(duration,-100);
-                tduration.setText(String.format("%d",duration));
+                duration = modifyDuration(duration, -100);
+                tduration.setText(String.format("%d", duration));
             }
         });
         durationminusminus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                duration=modifyDuration(duration,-1000);
-                tduration.setText(String.format("%d",duration));
+                duration = modifyDuration(duration, -1000);
+                tduration.setText(String.format("%d", duration));
             }
         });
 
@@ -438,11 +438,11 @@ public class MainActivity extends AppCompatActivity {
                 breakButton.setActivated(true);
             }
         });
-        for (int i=0;i<pButtons.length;i++) {
-            int idx=i;
+        for (int i = 0; i < pButtons.length; i++) {
+            int idx = i;
             pButtons[i].setClickable(true);
             Log.d("BUTTON", " idx=" + idx + " setting OnClickListener");
-            if ( pButtons[idx].isActivated() ) {
+            if (pButtons[idx].isActivated()) {
                 pButtons[idx].setBackgroundColor(Color.GREEN);
             } else {
                 pButtons[idx].setBackgroundColor(Color.GRAY);
@@ -454,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("BUTTON", " idx=" + idx + " enabled=" + pButtons[idx].isEnabled() + " activated=" + pButtons[idx].isActivated());
                     pButtons[idx].setActivated(!pButtons[idx].isActivated());
                     pButtons[idx].invalidate();
-                    if ( pButtons[idx].isActivated() ) {
+                    if (pButtons[idx].isActivated()) {
                         pButtons[idx].setBackgroundColor(Color.GREEN);
                     } else {
                         pButtons[idx].setBackgroundColor(Color.GRAY);
@@ -465,21 +465,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d("LISTENER", "Built");
-     }
+       }
 
 
     //-------------------------------------------------------------------------------------
     private int modifyDuration(int duration, int offset) {
-        if ( (duration + offset) > MAXDURATION ) {
-           return(MAXDURATION);
+        if ((duration + offset) > MAXDURATION) {
+            return (MAXDURATION);
         }
-        if ( (duration + offset) < MINDURATION ) {
-            return(MINDURATION);
+        if ((duration + offset) < MINDURATION) {
+            return (MINDURATION);
         }
-        return(duration + offset);
+        return (duration + offset);
     }
 
-        //-------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------
     private void startRecording() {
         Log.d("MAIN", "startRecordingWithFile()");
         String[] permissionRecordAudio = {Manifest.permission.RECORD_AUDIO};
@@ -511,13 +511,13 @@ public class MainActivity extends AppCompatActivity {
     //-------------------------------------------------------------------------------------
     private void playRecordedInMemory(ArrayList<ByteBuffer> audioBuffers) {
         Log.d("MAIN", "playRecordingOnly() audioBuffers.size=" + audioBuffers.size() + " pitch=" + Float.toString(pitch) + " speed=" + Float.toString(speed));
-        float[] pitches={2.0f,1.5f,1.0f,0.7f};
-        float[] volumes={0.25f,0.5f,0.75f,1f};
-        for (int i=0 ; i < audioTracks.length ; i++ ) {
-            Log.d("MAIN", "playRecordingOnly() player i=" + i );
+        float[] pitches = {2.0f, 1.5f, 1.0f, 0.7f};
+        float[] volumes = {0.25f, 0.5f, 0.75f, 1f};
+        for (int i = 0; i < audioTracks.length; i++) {
+            Log.d("MAIN", "playRecordingOnly() player i=" + i);
             PlaybackParams pbp = audioTrack.getPlaybackParams();
             pbp.allowDefaults();
-            pbp.setPitch((float)(pitch*pitches[i]));
+            pbp.setPitch((float) (pitch * pitches[i]));
             pbp.setSpeed(speed);
             audioTracks[i].setVolume(volumes[i]);
             audioTracks[i].setPlaybackParams(pbp);
@@ -525,105 +525,29 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (ByteBuffer ab : audioBuffers) {
-            int read=0;
-            int readWithEffect=0;
+            int read = 0;
+            int readWithEffect = 0;
             int readCapacity;
             ByteBuffer abWithEffect;
-            abWithEffect=applyEffect(50,ab);
-            readWithEffect=abWithEffect.capacity();
+            abWithEffect = new Delay(150,ab).applyEffect();
+            readWithEffect = abWithEffect.capacity();
             read = ab.capacity();
-            for (int i=0 ; i < audioTracks.length ; i++ ) {
+            for (int i = 0; i < audioTracks.length; i++) {
                 if (!pButtons[i].isActivated()) {
                     continue;
                 }
                 ab.rewind();
                 abWithEffect.rewind();
                 audioTracks[i].write(ab, readWithEffect, AudioTrack.WRITE_BLOCKING);
-            };
+            }
         }
 
         for (AudioTrack at : audioTracks) {
             at.stop();
         }
-        Log.d("MAIN","playRecordedInMemory() over");
+        Log.d("MAIN", "playRecordedInMemory() over");
     }
 
-    //-------------------------------------------------------------------------------------
-    private void copyBuffer(String tag,ByteBuffer src, ByteBuffer dest, int start, int count, float factor) {
-        //Log.d("Effect", tag + " start=" + start + " count=" + count + " dest.position=" + dest.position());
-        if ( (src.capacity() - src.position()) < 2*count) {
-            Log.d("Effect", tag + " src cannot get count elements");
-            return;
-        }
-        if ( (dest.capacity() - dest.position()) < 2*count) {
-            Log.d("Effect", tag + " dest cannot accept elements");
-            return;
-        }
-        for (int i = 0; i < count; i++) {
-            dest.putShort((short)(factor*src.getShort(start +2 * i)));
-        }
-        Log.d("Effect",tag + " After copy dest.position=" + dest.position());
-    }
-    //-------------------------------------------------------------------------------------
-    private ByteBuffer applyEffect(int delayMs, ByteBuffer arInit) {
-        //Log.d("MAIN", "applyEffect delay=" + delayMs);
-        if (delayMs  <2 || delayMs > 441 ) {
-            //Log.d("MAIN", "applyEffect delayMs out of range");
-            return(arInit);
-        }
-        int samplesGap=delayMs*SAMPLE_RATE/1000;
-        statsOnByteBuffer("Initial buffer",arInit);
-        // Samples the initial buffer (1 out of 2)
-        // after insertion of the duplicated sample, size will then be equal to the initial size
-        // Arf !!!!!!
-        ByteBuffer ar=ByteBuffer.allocateDirect(arInit.capacity()/2);
-        for (int i=0; i<ar.capacity();i+=4) {
-            ar.putShort((short)(arInit.getShort(i)));
-        }
-        statsOnByteBuffer("Reduced buffer",ar);
-
-        ByteBuffer arn = ByteBuffer.allocateDirect(arInit.capacity());
-        Log.d("MAIN", "applyEffect offset=" + samplesGap + " arn.capacity=" + arn.capacity() );
-        int sampleTotal=ar.capacity()/2;
-        copyBuffer("Init",ar,arn,0,samplesGap,0.7f);
-        for (int sampleIdx = samplesGap; sampleIdx < sampleTotal; sampleIdx+=samplesGap) {
-            int copyIdx;
-            copyIdx=2*(sampleIdx - samplesGap);
-            copyBuffer("Old",ar,arn,copyIdx,samplesGap,0.4f);
-            copyIdx=2*sampleIdx;
-            copyBuffer("Current",ar,arn,copyIdx,samplesGap,0.7f);
-        }
-        copyBuffer("Last",ar,arn,2*(sampleTotal-samplesGap),samplesGap,0.4f);
-        checkBuffer(arn,samplesGap);
-        statsOnByteBuffer("ARN stats",arn);
-        arn.rewind();
-        return(arn);
-    }
-
-    //-------------------------------------------------------------------------------------
-    private void checkBuffer(ByteBuffer bb, int offset) {
-        int errors=0;
-        for (int i=0; i<bb.capacity()/2;i+=2) {
-            if (bb.getShort(i) != bb.getShort(i+offset)) {
-                errors++;
-            }
-        }
-        Log.d("MAIN", "checkBuffers errors=" + errors);
-    }
-
-    //-------------------------------------------------------------------------------------
-    public void statsOnByteBuffer(String tag,ByteBuffer bb) {
-        int loud=0;
-        Log.d("MAIN"," statsOnByteBuffer " + tag + "bb capacity=" + bb.capacity() + " position=" + bb.position());
-        for (int i=0;i<bb.capacity()/2;i++) {
-            short val=bb.getShort(2*i);
-            if (Math.abs((int)val) > SILENCE ) {
-                loud++;
-            }
-        }
-        bb.rewind();
-        Log.d("MAIN", "statsOnByteBuffer " + tag + " loud="+loud);
-    }
     //-------------------------------------------------------------------------------------
     public void recordToFile(ArrayList<ByteBuffer> audioBuffers) {
         //final File file = new File(Environment.getExternalStorageDirectory(), "recording.pcm");
@@ -632,7 +556,6 @@ public class MainActivity extends AppCompatActivity {
         try (final FileOutputStream outStream = new FileOutputStream(file)) {
             for (ByteBuffer ab : audioBuffers) {
                 ab.rewind();
-                statsOnByteBuffer("Recording", ab );
                 byte[] toBytes=new byte[ab.capacity()];
                 ab.get(toBytes);
                 //outStream.write(ab.array());
@@ -661,7 +584,6 @@ public class MainActivity extends AppCompatActivity {
                   cloned=buffer.clone();
                   ByteBuffer ar=ByteBuffer.wrap(cloned);
                   ar.rewind();
-                  statsOnByteBuffer("ReadFromFile",ar);
                   ar.rewind();
                   boolean b=arbb.add(ar);
                   idx++;
@@ -676,7 +598,6 @@ public class MainActivity extends AppCompatActivity {
         for (int i=0;i<arbb.size();i++) {
             ByteBuffer bb=arbb.get(i);
             bb.rewind();
-            statsOnByteBuffer("ReadFromFileFinal i="+String.valueOf(i),bb);
             Log.d("MAIN"," bb capacity=" + bb.capacity() + " position=" + bb.position());
             bb.rewind();
         }
