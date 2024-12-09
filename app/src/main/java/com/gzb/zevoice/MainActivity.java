@@ -529,16 +529,18 @@ public class MainActivity extends AppCompatActivity {
             int readWithEffect = 0;
             int readCapacity;
             ByteBuffer abWithEffect;
-            abWithEffect = new Delay(150,ab).applyEffect();
+            abWithEffect = new Delay(0,ab).applyEffect();
             readWithEffect = abWithEffect.capacity();
-            read = ab.capacity();
+            //read = ab.capacity();
             for (int i = 0; i < audioTracks.length; i++) {
                 if (!pButtons[i].isActivated()) {
                     continue;
                 }
-                ab.rewind();
+                //ab.rewind();
                 abWithEffect.rewind();
-                audioTracks[i].write(ab, readWithEffect, AudioTrack.WRITE_BLOCKING);
+                audioTracks[i].write(abWithEffect, readWithEffect, AudioTrack.WRITE_BLOCKING);
+                abWithEffect.rewind();
+                audioTracks[i].write(abWithEffect, readWithEffect, AudioTrack.WRITE_BLOCKING);
             }
         }
 
